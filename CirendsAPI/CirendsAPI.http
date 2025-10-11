@@ -1,0 +1,6 @@
+@CirendsAPI_HostAddress = http://localhost:5069
+
+GET {{CirendsAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
