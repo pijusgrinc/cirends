@@ -72,3 +72,6 @@ Thumbs.db
 tmp/
 temp/
 
+/CirendsAPI/Properties/launchSettings.json
+/CirendsAPI/appsettings.Development.json
+CirendsAPI/appsettings.json
