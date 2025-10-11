@@ -18,16 +18,14 @@ namespace CirendsAPI.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
-
             // Configure User entity
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.HasIndex(e => e.Email).IsUnique();
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
                 entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
+                entity.HasIndex(e => e.Email).IsUnique();
             });
 
             // Configure Activity entity
@@ -67,7 +65,7 @@ namespace CirendsAPI.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // Configure Expense entity
+            // Configure Expense entity - TIKAI Task relationship
             modelBuilder.Entity<Expense>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -76,15 +74,11 @@ namespace CirendsAPI.Data
                 entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
 
-                entity.HasOne(e => e.Activity)
-                      .WithMany(a => a.Expenses)
-                      .HasForeignKey(e => e.ActivityId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
+                // TIKAI Task relationship
                 entity.HasOne(e => e.Task)
                       .WithMany(t => t.Expenses)
                       .HasForeignKey(e => e.TaskId)
-                      .OnDelete(DeleteBehavior.SetNull);
+                      .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.PaidBy)
                       .WithMany(u => u.Expenses)
@@ -125,7 +119,6 @@ namespace CirendsAPI.Data
                       .HasForeignKey(e => e.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // Ensure unique expense-user combination
                 entity.HasIndex(e => new { e.ExpenseId, e.UserId }).IsUnique();
             });
         }

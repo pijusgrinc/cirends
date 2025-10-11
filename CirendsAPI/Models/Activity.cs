@@ -28,7 +28,6 @@ namespace CirendsAPI.Models
         // Navigation properties
         public User CreatedBy { get; set; } = null!;
         public List<TaskItem> Tasks { get; set; } = new();
-        public List<Expense> Expenses { get; set; } = new();
         public List<ActivityUser> ActivityUsers { get; set; } = new(); // Many-to-many with users
     }
 }

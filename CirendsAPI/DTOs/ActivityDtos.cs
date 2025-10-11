@@ -45,7 +45,16 @@ namespace CirendsAPI.DTOs
         public DateTime UpdatedAt { get; set; }
         public UserDto CreatedBy { get; set; } = null!;
         public List<TaskItemDto> Tasks { get; set; } = new();
-        public List<ExpenseDto> Expenses { get; set; } = new();
-        public List<UserDto> Participants { get; set; } = new();
+        public List<ActivityUserDto> Participants { get; set; } = new(); // Changed from List<UserDto> to List<ActivityUserDto>
+    }
+
+    // Add the missing ActivityUserDto class
+    public class ActivityUserDto
+    {
+        public int ActivityId { get; set; }
+        public int UserId { get; set; }
+        public bool IsAdmin { get; set; }
+        public DateTime JoinedAt { get; set; }
+        public UserDto User { get; set; } = null!;
     }
 }

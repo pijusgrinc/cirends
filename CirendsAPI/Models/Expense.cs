@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CirendsAPI.Models
 {
@@ -14,26 +13,22 @@ namespace CirendsAPI.Models
         [StringLength(500)]
         public string? Description { get; set; }
         
-        [Column(TypeName = "decimal(18,2)")]
+        [Range(0.01, double.MaxValue)]
         public decimal Amount { get; set; }
         
-        [Required]
         [StringLength(3)]
         public string Currency { get; set; } = "EUR";
         
         public DateTime ExpenseDate { get; set; } = DateTime.UtcNow;
-        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         
         // Foreign keys
-        public int ActivityId { get; set; }
-        public int? TaskId { get; set; }
+        public int TaskId { get; set; }  // Required
         public int PaidByUserId { get; set; }
         
         // Navigation properties
-        public Activity Activity { get; set; } = null!;
-        public TaskItem? Task { get; set; }
+        public TaskItem Task { get; set; } = null!;
         public User PaidBy { get; set; } = null!;
         public List<ExpenseShare> ExpenseShares { get; set; } = new();
     }

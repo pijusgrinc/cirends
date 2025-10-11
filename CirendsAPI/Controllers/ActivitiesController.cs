@@ -9,7 +9,7 @@ using System.Security.Claims;
 namespace CirendsAPI.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/activities")]
     [Authorize]
     public class ActivitiesController : ControllerBase
     {
@@ -38,7 +38,8 @@ namespace CirendsAPI.Controllers
                 .ThenInclude(t => t.AssignedTo)
                 .Include(a => a.Tasks)
                 .ThenInclude(t => t.CreatedBy)
-                .Include(a => a.Expenses)
+                .Include(a => a.Tasks)
+                .ThenInclude(t => t.Expenses)
                 .ThenInclude(e => e.PaidBy)
                 .Where(a => a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId))
                 .ToListAsync();
@@ -60,12 +61,19 @@ namespace CirendsAPI.Controllers
                     Email = a.CreatedBy.Email,
                     CreatedAt = a.CreatedBy.CreatedAt
                 },
-                Participants = a.ActivityUsers.Select(au => new UserDto
+                Participants = a.ActivityUsers.Select(au => new ActivityUserDto
                 {
-                    Id = au.User.Id,
-                    Name = au.User.Name,
-                    Email = au.User.Email,
-                    CreatedAt = au.User.CreatedAt
+                    ActivityId = au.ActivityId,
+                    UserId = au.UserId,
+                    IsAdmin = au.IsAdmin,
+                    JoinedAt = au.JoinedAt,
+                    User = new UserDto
+                    {
+                        Id = au.User.Id,
+                        Name = au.User.Name,
+                        Email = au.User.Email,
+                        CreatedAt = au.User.CreatedAt
+                    }
                 }).ToList(),
                 Tasks = a.Tasks.Select(t => new TaskItemDto
                 {
@@ -92,28 +100,44 @@ namespace CirendsAPI.Controllers
                         Name = t.CreatedBy.Name,
                         Email = t.CreatedBy.Email,
                         CreatedAt = t.CreatedBy.CreatedAt
-                    }
-                }).ToList(),
-                Expenses = a.Expenses.Select(e => new ExpenseDto
-                {
-                    Id = e.Id,
-                    Name = e.Name,
-                    Description = e.Description,
-                    Amount = e.Amount,
-                    Currency = e.Currency,
-                    ExpenseDate = e.ExpenseDate,
-                    CreatedAt = e.CreatedAt,
-                    UpdatedAt = e.UpdatedAt,
-                    ActivityId = e.ActivityId,
-                    TaskId = e.TaskId,
-                    PaidBy = new UserDto
+                    },
+                    Expenses = t.Expenses.Select(e => new ExpenseDto
                     {
-                        Id = e.PaidBy.Id,
-                        Name = e.PaidBy.Name,
-                        Email = e.PaidBy.Email,
-                        CreatedAt = e.PaidBy.CreatedAt
-                    }
+                        Id = e.Id,
+                        Name = e.Name,
+                        Description = e.Description,
+                        Amount = e.Amount,
+                        Currency = e.Currency,
+                        ExpenseDate = e.ExpenseDate,
+                        CreatedAt = e.CreatedAt,
+                        UpdatedAt = e.UpdatedAt,
+                        TaskId = e.TaskId,  // Only TaskId, no ActivityId
+                        PaidBy = new UserDto
+                        {
+                            Id = e.PaidBy.Id,
+                            Name = e.PaidBy.Name,
+                            Email = e.PaidBy.Email,
+                            CreatedAt = e.PaidBy.CreatedAt
+                        },
+                        ExpenseShares = e.ExpenseShares.Select(es => new ExpenseShareDto
+                        {
+                            Id = es.Id,
+                            UserId = es.UserId,
+                            ShareAmount = es.ShareAmount,
+                            SharePercentage = es.SharePercentage,
+                            IsPaid = es.IsPaid,
+                            PaidAt = es.PaidAt,
+                            User = es.User != null ? new UserDto
+                            {
+                                Id = es.User.Id,
+                                Name = es.User.Name,
+                                Email = es.User.Email,
+                                CreatedAt = es.User.CreatedAt
+                            } : null
+                        }).ToList()
+                    }).ToList()
                 }).ToList()
+                // REMOVED: Expenses property since expenses are now under tasks
             }).ToList();
 
             return Ok(activityDtos);
@@ -132,15 +156,22 @@ namespace CirendsAPI.Controllers
                 .ThenInclude(t => t.AssignedTo)
                 .Include(a => a.Tasks)
                 .ThenInclude(t => t.CreatedBy)
-                .Include(a => a.Expenses)
+                .Include(a => a.Tasks)
+                .ThenInclude(t => t.Expenses)
                 .ThenInclude(e => e.PaidBy)
-                .Include(a => a.Expenses)
+                .Include(a => a.Tasks)
+                .ThenInclude(t => t.Expenses)
                 .ThenInclude(e => e.ExpenseShares)
                 .ThenInclude(es => es.User)
-                .Where(a => a.Id == id && (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId)))
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(a => a.Id == id);
 
             if (activity == null)
+            {
+                return NotFound();
+            }
+
+            var hasAccess = activity.CreatedByUserId == userId || activity.ActivityUsers.Any(au => au.UserId == userId);
+            if (!hasAccess)
             {
                 return NotFound();
             }
@@ -162,81 +193,88 @@ namespace CirendsAPI.Controllers
                     Email = activity.CreatedBy.Email,
                     CreatedAt = activity.CreatedBy.CreatedAt
                 },
-                Participants = activity.ActivityUsers.Select(au => new UserDto
-                {
-                    Id = au.User.Id,
-                    Name = au.User.Name,
-                    Email = au.User.Email,
-                    CreatedAt = au.User.CreatedAt
-                }).ToList(),
                 Tasks = activity.Tasks.Select(t => new TaskItemDto
                 {
                     Id = t.Id,
                     Name = t.Name,
                     Description = t.Description,
-                    DueDate = t.DueDate,
                     Status = t.Status,
                     Priority = t.Priority,
+                    DueDate = t.DueDate,
+                    CompletedAt = t.CompletedAt,
                     CreatedAt = t.CreatedAt,
                     UpdatedAt = t.UpdatedAt,
-                    CompletedAt = t.CompletedAt,
                     ActivityId = t.ActivityId,
-                    AssignedTo = t.AssignedTo == null ? null : new UserDto
+                    AssignedTo = t.AssignedTo != null ? new UserDto
                     {
                         Id = t.AssignedTo.Id,
                         Name = t.AssignedTo.Name,
                         Email = t.AssignedTo.Email,
                         CreatedAt = t.AssignedTo.CreatedAt
-                    },
+                    } : null,
                     CreatedBy = new UserDto
                     {
                         Id = t.CreatedBy.Id,
                         Name = t.CreatedBy.Name,
                         Email = t.CreatedBy.Email,
                         CreatedAt = t.CreatedBy.CreatedAt
-                    }
-                }).ToList(),
-                Expenses = activity.Expenses.Select(e => new ExpenseDto
-                {
-                    Id = e.Id,
-                    Name = e.Name,
-                    Description = e.Description,
-                    Amount = e.Amount,
-                    Currency = e.Currency,
-                    ExpenseDate = e.ExpenseDate,
-                    CreatedAt = e.CreatedAt,
-                    UpdatedAt = e.UpdatedAt,
-                    ActivityId = e.ActivityId,
-                    TaskId = e.TaskId,
-                    PaidBy = new UserDto
-                    {
-                        Id = e.PaidBy.Id,
-                        Name = e.PaidBy.Name,
-                        Email = e.PaidBy.Email,
-                        CreatedAt = e.PaidBy.CreatedAt
                     },
-                    ExpenseShares = e.ExpenseShares.Select(es => new ExpenseShareDto
+                    Expenses = t.Expenses.Select(e => new ExpenseDto
                     {
-                        Id = es.Id,
-                        UserId = es.UserId,
-                        User = new UserDto
+                        Id = e.Id,
+                        Name = e.Name,
+                        Description = e.Description,
+                        Amount = e.Amount,
+                        Currency = e.Currency,
+                        ExpenseDate = e.ExpenseDate,
+                        CreatedAt = e.CreatedAt,
+                        UpdatedAt = e.UpdatedAt,
+                        TaskId = e.TaskId,  // Only TaskId, no ActivityId
+                        PaidBy = new UserDto
                         {
-                            Id = es.User.Id,
-                            Name = es.User.Name,
-                            Email = es.User.Email,
-                            CreatedAt = es.User.CreatedAt
+                            Id = e.PaidBy.Id,
+                            Name = e.PaidBy.Name,
+                            Email = e.PaidBy.Email,
+                            CreatedAt = e.PaidBy.CreatedAt
                         },
-                        ShareAmount = es.ShareAmount,
-                        SharePercentage = es.SharePercentage,
-                        IsPaid = es.IsPaid,
-                        PaidAt = es.PaidAt
+                        ExpenseShares = e.ExpenseShares.Select(es => new ExpenseShareDto
+                        {
+                            Id = es.Id,
+                            UserId = es.UserId,
+                            ShareAmount = es.ShareAmount,
+                            SharePercentage = es.SharePercentage,
+                            IsPaid = es.IsPaid,
+                            PaidAt = es.PaidAt,
+                            User = es.User != null ? new UserDto
+                            {
+                                Id = es.User.Id,
+                                Name = es.User.Name,
+                                Email = es.User.Email,
+                                CreatedAt = es.User.CreatedAt
+                            } : null
+                        }).ToList()
                     }).ToList()
+                }).ToList(),
+                Participants = activity.ActivityUsers.Select(au => new ActivityUserDto
+                {
+                    UserId = au.UserId,
+                    ActivityId = au.ActivityId,
+                    IsAdmin = au.IsAdmin,
+                    JoinedAt = au.JoinedAt,
+                    User = new UserDto
+                    {
+                        Id = au.User.Id,
+                        Name = au.User.Name,
+                        Email = au.User.Email,
+                        CreatedAt = au.User.CreatedAt
+                    }
                 }).ToList()
             };
 
             return Ok(activityDto);
         }
 
+        // ... rest of the controller methods remain the same
         [HttpPost]
         public async Task<ActionResult<ActivityDto>> CreateActivity(CreateActivityDto createActivityDto)
         {
@@ -326,18 +364,18 @@ namespace CirendsAPI.Controllers
 
             if (activity == null)
             {
-                return NotFound("Activity not found or no admin access");
+                return NotFound();
             }
 
-            var participant = await _context.Users.FindAsync(participantId);
-            if (participant == null)
+            var user = await _context.Users.FindAsync(participantId);
+            if (user == null)
             {
-                return NotFound("User not found");
+                return BadRequest("User not found");
             }
 
             if (activity.ActivityUsers.Any(au => au.UserId == participantId))
             {
-                return BadRequest("User already participant");
+                return BadRequest("User is already a participant");
             }
 
             var activityUser = new ActivityUser
@@ -364,16 +402,15 @@ namespace CirendsAPI.Controllers
 
             if (activity == null)
             {
-                return NotFound("Activity not found or no admin access");
+                return NotFound();
             }
 
             var activityUser = activity.ActivityUsers.FirstOrDefault(au => au.UserId == participantId);
             if (activityUser == null)
             {
-                return NotFound("Participant not found");
+                return NotFound("User is not a participant");
             }
 
-            // Prevent removing the creator
             if (activity.CreatedByUserId == participantId)
             {
                 return BadRequest("Cannot remove activity creator");
@@ -382,7 +419,7 @@ namespace CirendsAPI.Controllers
             _context.ActivityUsers.Remove(activityUser);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok();
         }
 
         private async Task<ActivityDto?> GetActivityDto(int id)
@@ -412,12 +449,20 @@ namespace CirendsAPI.Controllers
                     Email = activity.CreatedBy.Email,
                     CreatedAt = activity.CreatedBy.CreatedAt
                 },
-                Participants = activity.ActivityUsers.Select(au => new UserDto
+                Tasks = new List<TaskItemDto>(), // Will be populated by separate calls if needed
+                Participants = activity.ActivityUsers.Select(au => new ActivityUserDto
                 {
-                    Id = au.User.Id,
-                    Name = au.User.Name,
-                    Email = au.User.Email,
-                    CreatedAt = au.User.CreatedAt
+                    UserId = au.UserId,
+                    ActivityId = au.ActivityId,
+                    IsAdmin = au.IsAdmin,
+                    JoinedAt = au.JoinedAt,
+                    User = new UserDto
+                    {
+                        Id = au.User.Id,
+                        Name = au.User.Name,
+                        Email = au.User.Email,
+                        CreatedAt = au.User.CreatedAt
+                    }
                 }).ToList()
             };
         }

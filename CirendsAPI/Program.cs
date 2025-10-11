@@ -5,11 +5,20 @@ using System.Reflection;
 using System.Text;
 using CirendsAPI.Data;
 using CirendsAPI.Services;
+using CirendsAPI.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// Add AutoMapper - PATAISYTA registracija
+builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+// Add services
+builder.Services.AddScoped<IExpenseService, ExpenseService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -47,47 +56,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Add authorization
 builder.Services.AddAuthorization();
-
-// Add services
-builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Add Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "Cirends API",
-        Version = "v1",
-        Description = "REST API sistema veiklų planavimui",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact
-        {
-            Name = "Cirends Team",
-            Email = "contact@cirends.com"
-        }
-    });
-
-    // Add XML comments support
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    if (File.Exists(xmlPath))
-    {
-        c.IncludeXmlComments(xmlPath);
-    }
-
-    // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below. Example: 'Bearer 12345abcdef'",
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
     {
         {
             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -101,6 +85,14 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
 });
 
 var app = builder.Build();

@@ -11,7 +11,7 @@ namespace CirendsAPI.DTOs
         [StringLength(500)]
         public string? Description { get; set; }
         
-        [Range(0.01, double.MaxValue, ErrorMessage = "Amount must be greater than 0")]
+        [Range(0.01, double.MaxValue)]
         public decimal Amount { get; set; }
         
         [StringLength(3)]
@@ -19,9 +19,7 @@ namespace CirendsAPI.DTOs
         
         public DateTime ExpenseDate { get; set; } = DateTime.UtcNow;
         
-        public int? TaskId { get; set; }
-        
-        public List<ExpenseShareDto> Shares { get; set; } = new();
+        public List<ExpenseShareRequest> Shares { get; set; } = new();
     }
 
     public class UpdateExpenseDto
@@ -32,15 +30,13 @@ namespace CirendsAPI.DTOs
         [StringLength(500)]
         public string? Description { get; set; }
         
-        [Range(0.01, double.MaxValue, ErrorMessage = "Amount must be greater than 0")]
+        [Range(0.01, double.MaxValue)]
         public decimal? Amount { get; set; }
         
         [StringLength(3)]
         public string? Currency { get; set; }
         
         public DateTime? ExpenseDate { get; set; }
-        
-        public int? TaskId { get; set; }
     }
 
     public class ExpenseDto
@@ -49,12 +45,11 @@ namespace CirendsAPI.DTOs
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public decimal Amount { get; set; }
-        public string Currency { get; set; } = "EUR";
+        public string Currency { get; set; } = string.Empty;
         public DateTime ExpenseDate { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public int ActivityId { get; set; }
-        public int? TaskId { get; set; }
+        public int TaskId { get; set; }  // Removed ActivityId
         public UserDto PaidBy { get; set; } = null!;
         public List<ExpenseShareDto> ExpenseShares { get; set; } = new();
     }
@@ -63,10 +58,22 @@ namespace CirendsAPI.DTOs
     {
         public int Id { get; set; }
         public int UserId { get; set; }
-        public UserDto? User { get; set; }
         public decimal ShareAmount { get; set; }
-        public decimal SharePercentage { get; set; }
+        public decimal SharePercentage { get; set; }  // Added this property
         public bool IsPaid { get; set; }
-        public DateTime? PaidAt { get; set; }
+        public DateTime? PaidAt { get; set; }  // Added this property
+        public UserDto? User { get; set; }
+        
+    }
+    public class CreateExpenseShareDto
+    {
+        public int UserId { get; set; }
+        public decimal ShareAmount { get; set; }
+    }
+
+    public class ExpenseShareRequest
+    {
+        public int UserId { get; set; }
+        public decimal ShareAmount { get; set; }
     }
 }

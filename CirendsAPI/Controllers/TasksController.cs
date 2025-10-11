@@ -1,363 +1,142 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using CirendsAPI.Data;
 using CirendsAPI.DTOs;
-using CirendsAPI.Models;
+using CirendsAPI.Services;
+using CirendsAPI.Exceptions;
 using System.Security.Claims;
+using UnauthorizedAccessException = CirendsAPI.Exceptions.UnauthorizedAccessException2;
 
 namespace CirendsAPI.Controllers
 {
     [ApiController]
-    [Route("api/activities/{activityId}/[controller]")]
+    [Route("api/activities/{activityId}/tasks")]
     [Authorize]
     public class TasksController : ControllerBase
     {
-        private readonly CirendsDbContext _context;
+        private readonly ITaskService _taskService;
+        private readonly IMapper _mapper;
 
-        public TasksController(CirendsDbContext context)
+        public TasksController(ITaskService taskService, IMapper mapper)
         {
-            _context = context;
-        }
-
-        private int GetCurrentUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            _taskService = taskService;
+            _mapper = mapper;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TaskItemDto>>> GetTasks(int activityId)
         {
-            var userId = GetCurrentUserId();
-            
-            // Check if user has access to this activity
-            var hasAccess = await _context.Activities
-                .AnyAsync(a => a.Id == activityId && (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId)));
-
-            if (!hasAccess)
+            try
             {
-                return NotFound("Activity not found or no access");
+                var userId = GetCurrentUserId();
+                var tasks = await _taskService.GetTasksAsync(activityId, userId);
+                var taskDtos = _mapper.Map<IEnumerable<TaskItemDto>>(tasks);
+                return Ok(taskDtos);
             }
-
-            var tasks = await _context.Tasks
-                .Include(t => t.AssignedTo)
-                .Include(t => t.CreatedBy)
-                .Include(t => t.Expenses)
-                .ThenInclude(e => e.PaidBy)
-                .Where(t => t.ActivityId == activityId)
-                .ToListAsync();
-
-            var taskDtos = tasks.Select(t => new TaskItemDto
+            catch (NotFoundException ex)
             {
-                Id = t.Id,
-                Name = t.Name,
-                Description = t.Description,
-                DueDate = t.DueDate,
-                Status = t.Status,
-                Priority = t.Priority,
-                CreatedAt = t.CreatedAt,
-                UpdatedAt = t.UpdatedAt,
-                CompletedAt = t.CompletedAt,
-                ActivityId = t.ActivityId,
-                AssignedTo = t.AssignedTo == null ? null : new UserDto
-                {
-                    Id = t.AssignedTo.Id,
-                    Name = t.AssignedTo.Name,
-                    Email = t.AssignedTo.Email,
-                    CreatedAt = t.AssignedTo.CreatedAt
-                },
-                CreatedBy = new UserDto
-                {
-                    Id = t.CreatedBy.Id,
-                    Name = t.CreatedBy.Name,
-                    Email = t.CreatedBy.Email,
-                    CreatedAt = t.CreatedBy.CreatedAt
-                },
-                Expenses = t.Expenses.Select(e => new ExpenseDto
-                {
-                    Id = e.Id,
-                    Name = e.Name,
-                    Description = e.Description,
-                    Amount = e.Amount,
-                    Currency = e.Currency,
-                    ExpenseDate = e.ExpenseDate,
-                    CreatedAt = e.CreatedAt,
-                    UpdatedAt = e.UpdatedAt,
-                    ActivityId = e.ActivityId,
-                    TaskId = e.TaskId,
-                    PaidBy = new UserDto
-                    {
-                        Id = e.PaidBy.Id,
-                        Name = e.PaidBy.Name,
-                        Email = e.PaidBy.Email,
-                        CreatedAt = e.PaidBy.CreatedAt
-                    }
-                }).ToList()
-            }).ToList();
-
-            return Ok(taskDtos);
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<TaskItemDto>> GetTask(int activityId, int id)
         {
-            var userId = GetCurrentUserId();
-            
-            var task = await _context.Tasks
-                .Include(t => t.AssignedTo)
-                .Include(t => t.CreatedBy)
-                .Include(t => t.Activity)
-                .ThenInclude(a => a.ActivityUsers)
-                .Include(t => t.Expenses)
-                .ThenInclude(e => e.PaidBy)
-                .Where(t => t.Id == id && t.ActivityId == activityId)
-                .FirstOrDefaultAsync();
-
-            if (task == null)
+            try
             {
-                return NotFound();
+                var userId = GetCurrentUserId();
+                var task = await _taskService.GetTaskAsync(activityId, id, userId);
+                
+                if (task == null)
+                    return NotFound();
+
+                var taskDto = _mapper.Map<TaskItemDto>(task);
+                return Ok(taskDto);
             }
-
-            // Check if user has access to this activity
-            if (task.Activity.CreatedByUserId != userId && !task.Activity.ActivityUsers.Any(au => au.UserId == userId))
+            catch (NotFoundException ex)
             {
-                return NotFound();
+                return NotFound(ex.Message);
             }
-
-            var taskDto = new TaskItemDto
+            catch (UnauthorizedAccessException ex)
             {
-                Id = task.Id,
-                Name = task.Name,
-                Description = task.Description,
-                DueDate = task.DueDate,
-                Status = task.Status,
-                Priority = task.Priority,
-                CreatedAt = task.CreatedAt,
-                UpdatedAt = task.UpdatedAt,
-                CompletedAt = task.CompletedAt,
-                ActivityId = task.ActivityId,
-                AssignedTo = task.AssignedTo == null ? null : new UserDto
-                {
-                    Id = task.AssignedTo.Id,
-                    Name = task.AssignedTo.Name,
-                    Email = task.AssignedTo.Email,
-                    CreatedAt = task.AssignedTo.CreatedAt
-                },
-                CreatedBy = new UserDto
-                {
-                    Id = task.CreatedBy.Id,
-                    Name = task.CreatedBy.Name,
-                    Email = task.CreatedBy.Email,
-                    CreatedAt = task.CreatedBy.CreatedAt
-                },
-                Expenses = task.Expenses.Select(e => new ExpenseDto
-                {
-                    Id = e.Id,
-                    Name = e.Name,
-                    Description = e.Description,
-                    Amount = e.Amount,
-                    Currency = e.Currency,
-                    ExpenseDate = e.ExpenseDate,
-                    CreatedAt = e.CreatedAt,
-                    UpdatedAt = e.UpdatedAt,
-                    ActivityId = e.ActivityId,
-                    TaskId = e.TaskId,
-                    PaidBy = new UserDto
-                    {
-                        Id = e.PaidBy.Id,
-                        Name = e.PaidBy.Name,
-                        Email = e.PaidBy.Email,
-                        CreatedAt = e.PaidBy.CreatedAt
-                    }
-                }).ToList()
-            };
-
-            return Ok(taskDto);
+                return Forbid(ex.Message);
+            }
         }
 
         [HttpPost]
         public async Task<ActionResult<TaskItemDto>> CreateTask(int activityId, CreateTaskDto createTaskDto)
         {
-            var userId = GetCurrentUserId();
-            
-            // Check if user has access to this activity
-            var activity = await _context.Activities
-                .Include(a => a.ActivityUsers)
-                .FirstOrDefaultAsync(a => a.Id == activityId && (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId)));
-
-            if (activity == null)
+            try
             {
-                return NotFound("Activity not found or no access");
-            }
-
-            // Validate assigned user if provided
-            if (createTaskDto.AssignedToUserId.HasValue)
-            {
-                var assignedUser = await _context.Users.FindAsync(createTaskDto.AssignedToUserId.Value);
-                if (assignedUser == null)
-                {
-                    return BadRequest("Assigned user not found");
-                }
-
-                // Check if assigned user is participant of the activity
-                var isParticipant = activity.CreatedByUserId == createTaskDto.AssignedToUserId.Value ||
-                                  activity.ActivityUsers.Any(au => au.UserId == createTaskDto.AssignedToUserId.Value);
+                var userId = GetCurrentUserId();
+                var task = await _taskService.CreateTaskAsync(activityId, userId, createTaskDto);
+                var taskDto = _mapper.Map<TaskItemDto>(task);
                 
-                if (!isParticipant)
-                {
-                    return BadRequest("Assigned user is not a participant of this activity");
-                }
+                return CreatedAtAction(nameof(GetTask), new { activityId, id = task.Id }, taskDto);
             }
-
-            var task = new TaskItem
+            catch (NotFoundException ex)
             {
-                Name = createTaskDto.Name,
-                Description = createTaskDto.Description,
-                DueDate = createTaskDto.DueDate,
-                Priority = createTaskDto.Priority,
-                ActivityId = activityId,
-                AssignedToUserId = createTaskDto.AssignedToUserId,
-                CreatedByUserId = userId
-            };
-
-            _context.Tasks.Add(task);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetTask), new { activityId, id = task.Id }, await GetTaskDto(task.Id));
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(int activityId, int id, UpdateTaskDto updateTaskDto)
         {
-            var userId = GetCurrentUserId();
-            
-            var task = await _context.Tasks
-                .Include(t => t.Activity)
-                .ThenInclude(a => a.ActivityUsers)
-                .FirstOrDefaultAsync(t => t.Id == id && t.ActivityId == activityId);
-
-            if (task == null)
+            try
             {
-                return NotFound();
+                var userId = GetCurrentUserId();
+                await _taskService.UpdateTaskAsync(activityId, id, userId, updateTaskDto);
+                return NoContent();
             }
-
-            // Check if user has access to this activity
-            if (task.Activity.CreatedByUserId != userId && !task.Activity.ActivityUsers.Any(au => au.UserId == userId))
+            catch (NotFoundException ex)
             {
-                return NotFound();
+                return NotFound(ex.Message);
             }
-
-            // Validate assigned user if provided
-            if (updateTaskDto.AssignedToUserId.HasValue)
+            catch (UnauthorizedAccessException ex)
             {
-                var assignedUser = await _context.Users.FindAsync(updateTaskDto.AssignedToUserId.Value);
-                if (assignedUser == null)
-                {
-                    return BadRequest("Assigned user not found");
-                }
-
-                // Check if assigned user is participant of the activity
-                var isParticipant = task.Activity.CreatedByUserId == updateTaskDto.AssignedToUserId.Value ||
-                                  task.Activity.ActivityUsers.Any(au => au.UserId == updateTaskDto.AssignedToUserId.Value);
-                
-                if (!isParticipant)
-                {
-                    return BadRequest("Assigned user is not a participant of this activity");
-                }
+                return Forbid(ex.Message);
             }
-
-            if (updateTaskDto.Name != null) task.Name = updateTaskDto.Name;
-            if (updateTaskDto.Description != null) task.Description = updateTaskDto.Description;
-            if (updateTaskDto.DueDate.HasValue) task.DueDate = updateTaskDto.DueDate;
-            if (updateTaskDto.Status.HasValue) 
+            catch (ArgumentException ex)
             {
-                task.Status = updateTaskDto.Status.Value;
-                if (updateTaskDto.Status.Value == TaskItemStatus.Completed && task.CompletedAt == null)
-                {
-                    task.CompletedAt = DateTime.UtcNow;
-                }
-                else if (updateTaskDto.Status.Value != TaskItemStatus.Completed)
-                {
-                    task.CompletedAt = null;
-                }
+                return BadRequest(ex.Message);
             }
-            if (updateTaskDto.Priority.HasValue) task.Priority = updateTaskDto.Priority.Value;
-            if (updateTaskDto.AssignedToUserId.HasValue) task.AssignedToUserId = updateTaskDto.AssignedToUserId.Value;
-            
-            task.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int activityId, int id)
         {
-            var userId = GetCurrentUserId();
-            
-            var task = await _context.Tasks
-                .Include(t => t.Activity)
-                .ThenInclude(a => a.ActivityUsers)
-                .FirstOrDefaultAsync(t => t.Id == id && t.ActivityId == activityId);
-
-            if (task == null)
+            try
             {
-                return NotFound();
+                var userId = GetCurrentUserId();
+                await _taskService.DeleteTaskAsync(activityId, id, userId);
+                return NoContent();
             }
-
-            // Check if user has access to this activity and is creator or admin
-            var isCreator = task.CreatedByUserId == userId;
-            var isActivityCreator = task.Activity.CreatedByUserId == userId;
-            var isActivityAdmin = task.Activity.ActivityUsers.Any(au => au.UserId == userId && au.IsAdmin);
-
-            if (!isCreator && !isActivityCreator && !isActivityAdmin)
+            catch (NotFoundException ex)
             {
-                return Forbid();
+                return NotFound(ex.Message);
             }
-
-            _context.Tasks.Remove(task);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
         }
 
-        private async Task<TaskItemDto?> GetTaskDto(int id)
+        private int GetCurrentUserId()
         {
-            var task = await _context.Tasks
-                .Include(t => t.AssignedTo)
-                .Include(t => t.CreatedBy)
-                .FirstOrDefaultAsync(t => t.Id == id);
-
-            if (task == null) return null;
-
-            return new TaskItemDto
-            {
-                Id = task.Id,
-                Name = task.Name,
-                Description = task.Description,
-                DueDate = task.DueDate,
-                Status = task.Status,
-                Priority = task.Priority,
-                CreatedAt = task.CreatedAt,
-                UpdatedAt = task.UpdatedAt,
-                CompletedAt = task.CompletedAt,
-                ActivityId = task.ActivityId,
-                AssignedTo = task.AssignedTo == null ? null : new UserDto
-                {
-                    Id = task.AssignedTo.Id,
-                    Name = task.AssignedTo.Name,
-                    Email = task.AssignedTo.Email,
-                    CreatedAt = task.AssignedTo.CreatedAt
-                },
-                CreatedBy = new UserDto
-                {
-                    Id = task.CreatedBy.Id,
-                    Name = task.CreatedBy.Name,
-                    Email = task.CreatedBy.Email,
-                    CreatedAt = task.CreatedBy.CreatedAt
-                }
-            };
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
         }
     }
 }
