@@ -1,470 +1,354 @@
+using CirendsAPI.Data;
+using CirendsAPI.DTOs;
+using CirendsAPI.Helpers;
+using CirendsAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using CirendsAPI.Data;
-using CirendsAPI.DTOs;
-using CirendsAPI.Models;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace CirendsAPI.Controllers
 {
     [ApiController]
-    [Route("api/activities")]
+    [Route("api/[controller]")]
     [Authorize]
     public class ActivitiesController : ControllerBase
     {
         private readonly CirendsDbContext _context;
+        private readonly ILogger<ActivitiesController> _logger;
 
-        public ActivitiesController(CirendsDbContext context)
+        public ActivitiesController(CirendsDbContext context, ILogger<ActivitiesController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
-        private int GetCurrentUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        }
-
+        /// <summary>
+        /// Get all activities for current user
+        /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ActivityDto>>> GetActivities()
+        [ProducesResponseType(typeof(List<ActivityDto>), 200)]
+        [ProducesResponseType(401)]
+        public async Task<ActionResult<List<ActivityDto>>> GetActivities()
         {
-            var userId = GetCurrentUserId();
-            
-            var activities = await _context.Activities
-                .Include(a => a.CreatedBy)
-                .Include(a => a.ActivityUsers)
-                .ThenInclude(au => au.User)
-                .Include(a => a.Tasks)
-                .ThenInclude(t => t.AssignedTo)
-                .Include(a => a.Tasks)
-                .ThenInclude(t => t.CreatedBy)
-                .Include(a => a.Tasks)
-                .ThenInclude(t => t.Expenses)
-                .ThenInclude(e => e.PaidBy)
-                .Where(a => a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId))
-                .ToListAsync();
-
-            var activityDtos = activities.Select(a => new ActivityDto
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
             {
-                Id = a.Id,
-                Name = a.Name,
-                Description = a.Description,
-                StartDate = a.StartDate,
-                EndDate = a.EndDate,
-                Location = a.Location,
-                CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt,
-                CreatedBy = new UserDto
-                {
-                    Id = a.CreatedBy.Id,
-                    Name = a.CreatedBy.Name,
-                    Email = a.CreatedBy.Email,
-                    CreatedAt = a.CreatedBy.CreatedAt
-                },
-                Participants = a.ActivityUsers.Select(au => new ActivityUserDto
-                {
-                    ActivityId = au.ActivityId,
-                    UserId = au.UserId,
-                    IsAdmin = au.IsAdmin,
-                    JoinedAt = au.JoinedAt,
-                    User = new UserDto
-                    {
-                        Id = au.User.Id,
-                        Name = au.User.Name,
-                        Email = au.User.Email,
-                        CreatedAt = au.User.CreatedAt
-                    }
-                }).ToList(),
-                Tasks = a.Tasks.Select(t => new TaskItemDto
-                {
-                    Id = t.Id,
-                    Name = t.Name,
-                    Description = t.Description,
-                    DueDate = t.DueDate,
-                    Status = t.Status,
-                    Priority = t.Priority,
-                    CreatedAt = t.CreatedAt,
-                    UpdatedAt = t.UpdatedAt,
-                    CompletedAt = t.CompletedAt,
-                    ActivityId = t.ActivityId,
-                    AssignedTo = t.AssignedTo == null ? null : new UserDto
-                    {
-                        Id = t.AssignedTo.Id,
-                        Name = t.AssignedTo.Name,
-                        Email = t.AssignedTo.Email,
-                        CreatedAt = t.AssignedTo.CreatedAt
-                    },
-                    CreatedBy = new UserDto
-                    {
-                        Id = t.CreatedBy.Id,
-                        Name = t.CreatedBy.Name,
-                        Email = t.CreatedBy.Email,
-                        CreatedAt = t.CreatedBy.CreatedAt
-                    },
-                    Expenses = t.Expenses.Select(e => new ExpenseDto
-                    {
-                        Id = e.Id,
-                        Name = e.Name,
-                        Description = e.Description,
-                        Amount = e.Amount,
-                        Currency = e.Currency,
-                        ExpenseDate = e.ExpenseDate,
-                        CreatedAt = e.CreatedAt,
-                        UpdatedAt = e.UpdatedAt,
-                        TaskId = e.TaskId,  // Only TaskId, no ActivityId
-                        PaidBy = new UserDto
-                        {
-                            Id = e.PaidBy.Id,
-                            Name = e.PaidBy.Name,
-                            Email = e.PaidBy.Email,
-                            CreatedAt = e.PaidBy.CreatedAt
-                        },
-                        ExpenseShares = e.ExpenseShares.Select(es => new ExpenseShareDto
-                        {
-                            Id = es.Id,
-                            UserId = es.UserId,
-                            ShareAmount = es.ShareAmount,
-                            SharePercentage = es.SharePercentage,
-                            IsPaid = es.IsPaid,
-                            PaidAt = es.PaidAt,
-                            User = es.User != null ? new UserDto
-                            {
-                                Id = es.User.Id,
-                                Name = es.User.Name,
-                                Email = es.User.Email,
-                                CreatedAt = es.User.CreatedAt
-                            } : null
-                        }).ToList()
-                    }).ToList()
-                }).ToList()
-                // REMOVED: Expenses property since expenses are now under tasks
-            }).ToList();
+                return ValidationHelper.InvalidAuthenticationResponse();
+            }
 
-            return Ok(activityDtos);
+            try
+            {
+                var activities = await _context.Activities
+                    .AsNoTracking()
+                    .Where(a => a.CreatedByUserId == userId || 
+                           _context.ActivityUsers.Any(au => au.ActivityId == a.Id && au.UserId == userId))
+                    .Select(a => new ActivityDto
+                    {
+                        Id = a.Id,
+                        Name = a.Name,
+                        Description = a.Description,
+                        StartDate = a.StartDate,
+                        EndDate = a.EndDate,
+                        Location = a.Location,
+                        CreatedAt = a.CreatedAt
+                    })
+                    .ToListAsync();
+
+                return Ok(activities);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving activities for user {UserId}", userId);
+                return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
+            }
         }
 
+        /// <summary>
+        /// Get activity by ID
+        /// </summary>
+        /// <param name="id">Activity ID (must be positive)</param>
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ActivityDto), 200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(401)]
         public async Task<ActionResult<ActivityDto>> GetActivity(int id)
         {
-            var userId = GetCurrentUserId();
-            
-            var activity = await _context.Activities
-                .Include(a => a.CreatedBy)
-                .Include(a => a.ActivityUsers)
-                .ThenInclude(au => au.User)
-                .Include(a => a.Tasks)
-                .ThenInclude(t => t.AssignedTo)
-                .Include(a => a.Tasks)
-                .ThenInclude(t => t.CreatedBy)
-                .Include(a => a.Tasks)
-                .ThenInclude(t => t.Expenses)
-                .ThenInclude(e => e.PaidBy)
-                .Include(a => a.Tasks)
-                .ThenInclude(t => t.Expenses)
-                .ThenInclude(e => e.ExpenseShares)
-                .ThenInclude(es => es.User)
-                .FirstOrDefaultAsync(a => a.Id == id);
+            var validation = ValidationHelper.ValidatePositiveId(id, "activityId");
+            if (validation != null) return validation;
 
-            if (activity == null)
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
             {
-                return NotFound();
+                return ValidationHelper.InvalidAuthenticationResponse();
             }
 
-            var hasAccess = activity.CreatedByUserId == userId || activity.ActivityUsers.Any(au => au.UserId == userId);
-            if (!hasAccess)
+            try
             {
-                return NotFound();
+                var activity = await _context.Activities
+                    .AsNoTracking()
+                    .Include(a => a.Tasks)
+                    .FirstOrDefaultAsync(a => a.Id == id);
+
+                if (activity == null)
+                {
+                    return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
+                }
+
+                // Check authorization: creator or participant
+                var hasAccess = activity.CreatedByUserId == userId ||
+                               await _context.ActivityUsers.AnyAsync(au => au.ActivityId == id && au.UserId == userId);
+
+                if (!hasAccess)
+                {
+                    return Forbid();
+                }
+
+                return Ok(new ActivityDto
+                {
+                    Id = activity.Id,
+                    Name = activity.Name,
+                    Description = activity.Description,
+                    StartDate = activity.StartDate,
+                    EndDate = activity.EndDate,
+                    Location = activity.Location,
+                    CreatedAt = activity.CreatedAt
+                });
             }
-
-            var activityDto = new ActivityDto
+            catch (Exception ex)
             {
-                Id = activity.Id,
-                Name = activity.Name,
-                Description = activity.Description,
-                StartDate = activity.StartDate,
-                EndDate = activity.EndDate,
-                Location = activity.Location,
-                CreatedAt = activity.CreatedAt,
-                UpdatedAt = activity.UpdatedAt,
-                CreatedBy = new UserDto
-                {
-                    Id = activity.CreatedBy.Id,
-                    Name = activity.CreatedBy.Name,
-                    Email = activity.CreatedBy.Email,
-                    CreatedAt = activity.CreatedBy.CreatedAt
-                },
-                Tasks = activity.Tasks.Select(t => new TaskItemDto
-                {
-                    Id = t.Id,
-                    Name = t.Name,
-                    Description = t.Description,
-                    Status = t.Status,
-                    Priority = t.Priority,
-                    DueDate = t.DueDate,
-                    CompletedAt = t.CompletedAt,
-                    CreatedAt = t.CreatedAt,
-                    UpdatedAt = t.UpdatedAt,
-                    ActivityId = t.ActivityId,
-                    AssignedTo = t.AssignedTo != null ? new UserDto
-                    {
-                        Id = t.AssignedTo.Id,
-                        Name = t.AssignedTo.Name,
-                        Email = t.AssignedTo.Email,
-                        CreatedAt = t.AssignedTo.CreatedAt
-                    } : null,
-                    CreatedBy = new UserDto
-                    {
-                        Id = t.CreatedBy.Id,
-                        Name = t.CreatedBy.Name,
-                        Email = t.CreatedBy.Email,
-                        CreatedAt = t.CreatedBy.CreatedAt
-                    },
-                    Expenses = t.Expenses.Select(e => new ExpenseDto
-                    {
-                        Id = e.Id,
-                        Name = e.Name,
-                        Description = e.Description,
-                        Amount = e.Amount,
-                        Currency = e.Currency,
-                        ExpenseDate = e.ExpenseDate,
-                        CreatedAt = e.CreatedAt,
-                        UpdatedAt = e.UpdatedAt,
-                        TaskId = e.TaskId,  // Only TaskId, no ActivityId
-                        PaidBy = new UserDto
-                        {
-                            Id = e.PaidBy.Id,
-                            Name = e.PaidBy.Name,
-                            Email = e.PaidBy.Email,
-                            CreatedAt = e.PaidBy.CreatedAt
-                        },
-                        ExpenseShares = e.ExpenseShares.Select(es => new ExpenseShareDto
-                        {
-                            Id = es.Id,
-                            UserId = es.UserId,
-                            ShareAmount = es.ShareAmount,
-                            SharePercentage = es.SharePercentage,
-                            IsPaid = es.IsPaid,
-                            PaidAt = es.PaidAt,
-                            User = es.User != null ? new UserDto
-                            {
-                                Id = es.User.Id,
-                                Name = es.User.Name,
-                                Email = es.User.Email,
-                                CreatedAt = es.User.CreatedAt
-                            } : null
-                        }).ToList()
-                    }).ToList()
-                }).ToList(),
-                Participants = activity.ActivityUsers.Select(au => new ActivityUserDto
-                {
-                    UserId = au.UserId,
-                    ActivityId = au.ActivityId,
-                    IsAdmin = au.IsAdmin,
-                    JoinedAt = au.JoinedAt,
-                    User = new UserDto
-                    {
-                        Id = au.User.Id,
-                        Name = au.User.Name,
-                        Email = au.User.Email,
-                        CreatedAt = au.User.CreatedAt
-                    }
-                }).ToList()
-            };
-
-            return Ok(activityDto);
+                _logger.LogError(ex, "Error retrieving activity {ActivityId}", id);
+                return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
+            }
         }
 
-        // ... rest of the controller methods remain the same
+        /// <summary>
+        /// Create new activity
+        /// </summary>
         [HttpPost]
-        public async Task<ActionResult<ActivityDto>> CreateActivity(CreateActivityDto createActivityDto)
+        [ProducesResponseType(typeof(ActivityDto), 201)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(401)]
+        public async Task<ActionResult<ActivityDto>> CreateActivity([FromBody] CreateActivityDto? createDto)
         {
-            var userId = GetCurrentUserId();
-            
-            var activity = new Activity
+            if (createDto == null)
             {
-                Name = createActivityDto.Name,
-                Description = createActivityDto.Description,
-                StartDate = createActivityDto.StartDate,
-                EndDate = createActivityDto.EndDate,
-                Location = createActivityDto.Location,
-                CreatedByUserId = userId
-            };
-
-            _context.Activities.Add(activity);
-            await _context.SaveChangesAsync();
-
-            // Add creator as participant
-            var activityUser = new ActivityUser
-            {
-                ActivityId = activity.Id,
-                UserId = userId,
-                IsAdmin = true
-            };
-
-            _context.ActivityUsers.Add(activityUser);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetActivity), new { id = activity.Id }, await GetActivityDto(activity.Id));
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateActivity(int id, UpdateActivityDto updateActivityDto)
-        {
-            var userId = GetCurrentUserId();
-            
-            var activity = await _context.Activities
-                .Include(a => a.ActivityUsers)
-                .FirstOrDefaultAsync(a => a.Id == id && (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId && au.IsAdmin)));
-
-            if (activity == null)
-            {
-                return NotFound();
+                return BadRequest(new { message = "Request body is required", error = "EMPTY_BODY" });
             }
 
-            if (updateActivityDto.Name != null) activity.Name = updateActivityDto.Name;
-            if (updateActivityDto.Description != null) activity.Description = updateActivityDto.Description;
-            if (updateActivityDto.StartDate.HasValue) activity.StartDate = updateActivityDto.StartDate.Value;
-            if (updateActivityDto.EndDate.HasValue) activity.EndDate = updateActivityDto.EndDate.Value;
-            if (updateActivityDto.Location != null) activity.Location = updateActivityDto.Location;
-            
-            activity.UpdatedAt = DateTime.UtcNow;
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Invalid input data", errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)) });
+            }
 
-            await _context.SaveChangesAsync();
+            if (createDto.EndDate < createDto.StartDate)
+            {
+                return BadRequest(new
+                {
+                    message = "EndDate should be greater than or equal to StartDate",
+                    error = "INVALID_DATE_RANGE"
+                });
+            }
 
-            return NoContent();
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
+            {
+                return ValidationHelper.InvalidAuthenticationResponse();
+            }
+
+            try
+            {
+                var activity = new Activity
+                {
+                    Name = createDto.Name.Trim(),
+                    Description = createDto.Description?.Trim(),
+                    StartDate = createDto.StartDate,
+                    EndDate = createDto.EndDate,
+                    Location = createDto.Location?.Trim(),
+                    CreatedByUserId = userId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Activities.Add(activity);
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(nameof(GetActivity), new { id = activity.Id }, new ActivityDto
+                {
+                    Id = activity.Id,
+                    Name = activity.Name,
+                    Description = activity.Description,
+                    StartDate = activity.StartDate,
+                    EndDate = activity.EndDate,
+                    Location = activity.Location,
+                    CreatedAt = activity.CreatedAt
+                });
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database error creating activity for user {UserId}", userId);
+                return StatusCode(500, new { message = "Failed to create activity", error = "DATABASE_ERROR" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error creating activity for user {UserId}", userId);
+                return StatusCode(500, new { message = "Internal server error", error = "UNKNOWN_ERROR" });
+            }
         }
 
+        /// <summary>
+        /// Update activity
+        /// </summary>
+        /// <param name="id">Activity ID (must be positive)</param>
+        [HttpPut("{id}")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        public async Task<IActionResult> UpdateActivity(int id, [FromBody] UpdateActivityDto? updateDto)
+        {
+            var validation = ValidationHelper.ValidatePositiveId(id, "activityId");
+            if (validation != null) return validation;
+
+            if (updateDto == null)
+            {
+                return BadRequest(new { message = "Request body is required", error = "EMPTY_BODY" });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Invalid input data", errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)) });
+            }
+
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
+            {
+                return ValidationHelper.InvalidAuthenticationResponse();
+            }
+
+            try
+            {
+                var activity = await _context.Activities.FindAsync(id);
+                if (activity == null)
+                {
+                    return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
+                }
+
+                if (activity.CreatedByUserId != userId && !User.IsInRole("Admin"))
+                {
+                    return Forbid();
+                }
+
+                if (!string.IsNullOrWhiteSpace(updateDto.Name))
+                    activity.Name = updateDto.Name.Trim();
+                if (!string.IsNullOrWhiteSpace(updateDto.Description))
+                    activity.Description = updateDto.Description.Trim();
+                if (updateDto.StartDate.HasValue)
+                    activity.StartDate = updateDto.StartDate.Value;
+                if (updateDto.EndDate.HasValue)
+                    activity.EndDate = updateDto.EndDate.Value;
+                if (!string.IsNullOrWhiteSpace(updateDto.Location))
+                    activity.Location = updateDto.Location.Trim();
+
+                activity.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                return NoContent();
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database error updating activity {ActivityId}", id);
+                return StatusCode(500, new { message = "Failed to update activity", error = "DATABASE_ERROR" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error updating activity {ActivityId}", id);
+                return StatusCode(500, new { message = "Internal server error", error = "UNKNOWN_ERROR" });
+            }
+        }
+
+        /// <summary>
+        /// Delete activity
+        /// </summary>
+        /// <param name="id">Activity ID (must be positive)</param>
         [HttpDelete("{id}")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
         public async Task<IActionResult> DeleteActivity(int id)
         {
-            var userId = GetCurrentUserId();
-            
-            var activity = await _context.Activities
-                .FirstOrDefaultAsync(a => a.Id == id && a.CreatedByUserId == userId);
+            var validation = ValidationHelper.ValidatePositiveId(id, "activityId");
+            if (validation != null) return validation;
 
-            if (activity == null)
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
             {
-                return NotFound();
+                return ValidationHelper.InvalidAuthenticationResponse();
             }
 
-            _context.Activities.Remove(activity);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        [HttpPost("{id}/participants/{participantId}")]
-        public async Task<IActionResult> AddParticipant(int id, int participantId)
-        {
-            var userId = GetCurrentUserId();
-            
-            var activity = await _context.Activities
-                .Include(a => a.ActivityUsers)
-                .FirstOrDefaultAsync(a => a.Id == id && (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId && au.IsAdmin)));
-
-            if (activity == null)
+            try
             {
-                return NotFound();
-            }
-
-            var user = await _context.Users.FindAsync(participantId);
-            if (user == null)
-            {
-                return BadRequest("User not found");
-            }
-
-            if (activity.ActivityUsers.Any(au => au.UserId == participantId))
-            {
-                return BadRequest("User is already a participant");
-            }
-
-            var activityUser = new ActivityUser
-            {
-                ActivityId = id,
-                UserId = participantId,
-                IsAdmin = false
-            };
-
-            _context.ActivityUsers.Add(activityUser);
-            await _context.SaveChangesAsync();
-
-            return Ok();
-        }
-
-        [HttpDelete("{id}/participants/{participantId}")]
-        public async Task<IActionResult> RemoveParticipant(int id, int participantId)
-        {
-            var userId = GetCurrentUserId();
-            
-            var activity = await _context.Activities
-                .Include(a => a.ActivityUsers)
-                .FirstOrDefaultAsync(a => a.Id == id && (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId && au.IsAdmin)));
-
-            if (activity == null)
-            {
-                return NotFound();
-            }
-
-            var activityUser = activity.ActivityUsers.FirstOrDefault(au => au.UserId == participantId);
-            if (activityUser == null)
-            {
-                return NotFound("User is not a participant");
-            }
-
-            if (activity.CreatedByUserId == participantId)
-            {
-                return BadRequest("Cannot remove activity creator");
-            }
-
-            _context.ActivityUsers.Remove(activityUser);
-            await _context.SaveChangesAsync();
-
-            return Ok();
-        }
-
-        private async Task<ActivityDto?> GetActivityDto(int id)
-        {
-            var activity = await _context.Activities
-                .Include(a => a.CreatedBy)
-                .Include(a => a.ActivityUsers)
-                .ThenInclude(au => au.User)
-                .FirstOrDefaultAsync(a => a.Id == id);
-
-            if (activity == null) return null;
-
-            return new ActivityDto
-            {
-                Id = activity.Id,
-                Name = activity.Name,
-                Description = activity.Description,
-                StartDate = activity.StartDate,
-                EndDate = activity.EndDate,
-                Location = activity.Location,
-                CreatedAt = activity.CreatedAt,
-                UpdatedAt = activity.UpdatedAt,
-                CreatedBy = new UserDto
+                var activity = await _context.Activities.FindAsync(id);
+                if (activity == null)
                 {
-                    Id = activity.CreatedBy.Id,
-                    Name = activity.CreatedBy.Name,
-                    Email = activity.CreatedBy.Email,
-                    CreatedAt = activity.CreatedBy.CreatedAt
-                },
-                Tasks = new List<TaskItemDto>(), // Will be populated by separate calls if needed
-                Participants = activity.ActivityUsers.Select(au => new ActivityUserDto
+                    return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
+                }
+
+                if (activity.CreatedByUserId != userId && !User.IsInRole("Admin"))
                 {
-                    UserId = au.UserId,
-                    ActivityId = au.ActivityId,
-                    IsAdmin = au.IsAdmin,
-                    JoinedAt = au.JoinedAt,
-                    User = new UserDto
-                    {
-                        Id = au.User.Id,
-                        Name = au.User.Name,
-                        Email = au.User.Email,
-                        CreatedAt = au.User.CreatedAt
-                    }
-                }).ToList()
-            };
+                    return Forbid();
+                }
+
+                _context.Activities.Remove(activity);
+                await _context.SaveChangesAsync();
+
+                return NoContent();
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database error deleting activity {ActivityId}", id);
+                return StatusCode(500, new { message = "Failed to delete activity", error = "DATABASE_ERROR" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error deleting activity {ActivityId}", id);
+                return StatusCode(500, new { message = "Internal server error", error = "UNKNOWN_ERROR" });
+            }
         }
+    }
+
+    public class CreateActivityDto
+    {
+        [Required(ErrorMessage = "Activity name is required")]
+        [StringLength(200, MinimumLength = 2, ErrorMessage = "Name must be between 2 and 200 characters")]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(1000, ErrorMessage = "Description must not exceed 1000 characters")]
+        public string? Description { get; set; }
+
+        [Required(ErrorMessage = "Start date is required")]
+        public DateTime StartDate { get; set; }
+
+        [Required(ErrorMessage = "End date is required")]
+        public DateTime EndDate { get; set; }
+
+        [StringLength(100, ErrorMessage = "Location must not exceed 100 characters")]
+        public string? Location { get; set; }
+    }
+
+    public class UpdateActivityDto
+    {
+        [StringLength(200, MinimumLength = 2, ErrorMessage = "Name must be between 2 and 200 characters")]
+        public string? Name { get; set; }
+
+        [StringLength(1000, ErrorMessage = "Description must not exceed 1000 characters")]
+        public string? Description { get; set; }
+
+        public DateTime? StartDate { get; set; }
+
+        public DateTime? EndDate { get; set; }
+
+        [StringLength(100, ErrorMessage = "Location must not exceed 100 characters")]
+        public string? Location { get; set; }
     }
 }

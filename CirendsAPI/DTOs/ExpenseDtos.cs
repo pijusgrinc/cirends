@@ -45,12 +45,12 @@ namespace CirendsAPI.DTOs
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public decimal Amount { get; set; }
-        public string Currency { get; set; } = string.Empty;
+        public string Currency { get; set; } = "EUR";
         public DateTime ExpenseDate { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public int TaskId { get; set; }  // Removed ActivityId
-        public UserDto PaidBy { get; set; } = null!;
+        public int TaskId { get; set; }
+        public UserDto? PaidBy { get; set; }
         public List<ExpenseShareDto> ExpenseShares { get; set; } = new();
     }
 

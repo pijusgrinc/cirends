@@ -28,8 +28,7 @@ namespace CirendsAPI.Mappings
             // Task mappings
             CreateMap<TaskItem, TaskItemDto>()
                 .ForMember(dest => dest.AssignedTo, opt => opt.MapFrom(src => src.AssignedTo))
-                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
-                .ForMember(dest => dest.Expenses, opt => opt.MapFrom(src => src.Expenses));
+                .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy));
 
             CreateMap<CreateTaskDto, TaskItem>();
             CreateMap<UpdateTaskDto, TaskItem>()

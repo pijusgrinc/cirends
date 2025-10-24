@@ -36,6 +36,18 @@ namespace CirendsAPI.DTOs
         public int? AssignedToUserId { get; set; }
     }
 
+    public class TaskDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public DateTime? DueDate { get; set; }
+        public int Status { get; set; }
+        public int Priority { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int ActivityId { get; set; }
+    }
+
     public class TaskItemDto
     {
         public int Id { get; set; }
@@ -50,6 +62,6 @@ namespace CirendsAPI.DTOs
         public int ActivityId { get; set; }
         public UserDto? AssignedTo { get; set; }
         public UserDto CreatedBy { get; set; } = null!;
-        public List<ExpenseDto> Expenses { get; set; } = new();
+        // Removed Expenses to avoid circular reference
     }
 }

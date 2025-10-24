@@ -59,7 +59,7 @@ namespace CirendsAPI.Services
                             task.Activity.ActivityUsers.Any(au => au.UserId == userId);
 
             if (!hasAccess)
-                throw new CirendsAPI.Exceptions.UnauthorizedAccessException2("No access to this activity");
+                throw new CirendsAPI.Exceptions.UnauthorizedAccessException("No access to this activity");
 
             var expenses = await _context.Expenses
                 .Where(e => e.TaskId == taskId)
@@ -84,7 +84,7 @@ namespace CirendsAPI.Services
                             task.Activity.ActivityUsers.Any(au => au.UserId == userId);
 
             if (!hasAccess)
-                throw new CirendsAPI.Exceptions.UnauthorizedAccessException2("No access to this activity");
+                throw new CirendsAPI.Exceptions.UnauthorizedAccessException("No access to this activity");
 
             var expense = new Expense
             {
@@ -137,7 +137,7 @@ namespace CirendsAPI.Services
                 throw new NotFoundException("Expense not found");
 
             if (expense.PaidByUserId != userId)
-                throw new CirendsAPI.Exceptions.UnauthorizedAccessException2("Only expense payer can modify this expense");
+                throw new CirendsAPI.Exceptions.UnauthorizedAccessException("Only expense payer can modify this expense");
 
             return expense;
         }

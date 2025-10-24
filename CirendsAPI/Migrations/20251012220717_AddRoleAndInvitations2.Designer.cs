@@ -3,6 +3,7 @@ using System;
 using CirendsAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CirendsAPI.Migrations
 {
     [DbContext(typeof(CirendsDbContext))]
-    partial class CirendsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251012220717_AddRoleAndInvitations2")]
+    partial class AddRoleAndInvitations2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,7 +65,7 @@ namespace CirendsAPI.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.ToTable("Activities", (string)null);
+                    b.ToTable("Activities");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.ActivityUser", b =>
@@ -83,7 +86,7 @@ namespace CirendsAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ActivityUsers", (string)null);
+                    b.ToTable("ActivityUsers");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.Expense", b =>
@@ -132,7 +135,7 @@ namespace CirendsAPI.Migrations
 
                     b.HasIndex("TaskId");
 
-                    b.ToTable("Expenses", (string)null);
+                    b.ToTable("Expenses");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.ExpenseShare", b =>
@@ -171,7 +174,7 @@ namespace CirendsAPI.Migrations
                     b.HasIndex("ExpenseId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("ExpenseShares", (string)null);
+                    b.ToTable("ExpenseShares");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.Invitation", b =>
@@ -211,7 +214,7 @@ namespace CirendsAPI.Migrations
 
                     b.HasIndex("InvitedUserId");
 
-                    b.ToTable("Invitations", (string)null);
+                    b.ToTable("Invitations");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.TaskItem", b =>
@@ -266,7 +269,7 @@ namespace CirendsAPI.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.ToTable("Tasks", (string)null);
+                    b.ToTable("Tasks");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.User", b =>
@@ -305,7 +308,7 @@ namespace CirendsAPI.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.Activity", b =>

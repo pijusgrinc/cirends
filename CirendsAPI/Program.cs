@@ -6,19 +6,20 @@ using System.Text;
 using CirendsAPI.Data;
 using CirendsAPI.Services;
 using CirendsAPI.Mappings;
+using CirendsAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 
-// Add AutoMapper - PATAISYTA registracija
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // Add services
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IValidationService, ValidationService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -106,6 +107,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowVueApp");
+
+// Add global exception handler
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

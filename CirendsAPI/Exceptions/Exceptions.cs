@@ -7,10 +7,10 @@ namespace CirendsAPI.Exceptions
         public NotFoundException(string message, Exception innerException) : base(message, innerException) { }
     }
 
-    public class UnauthorizedAccessException2 : Exception
+    public class UnauthorizedAccessException : Exception
     {
-        public UnauthorizedAccessException2(string message) : base(message) { }
+        public UnauthorizedAccessException(string message) : base(message) { }
 
-        public UnauthorizedAccessException2(string message, Exception innerException) : base(message, innerException) { }
+        public UnauthorizedAccessException(string message, Exception innerException) : base(message, innerException) { }
     }
 }

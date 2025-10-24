@@ -2,7 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using CirendsAPI.Data;
 using CirendsAPI.DTOs;
 using CirendsAPI.Models;
-using UnauthorizedAccessException = CirendsAPI.Exceptions.UnauthorizedAccessException2;
+using CirendsAPI.Exceptions;
+using UnauthorizedAccessException = CirendsAPI.Exceptions.UnauthorizedAccessException;
 
 namespace CirendsAPI.Services
 {
@@ -35,7 +36,7 @@ namespace CirendsAPI.Services
             if (activity == null)
             {
                 Console.WriteLine("Activity not found");
-                return null;
+                throw new NotFoundException("Activity not found");
             }
             
             var hasAccess = activity.CreatedByUserId == userId || 
@@ -44,7 +45,7 @@ namespace CirendsAPI.Services
             if (!hasAccess)
             {
                 Console.WriteLine("User has no access to activity");
-                return null;
+                throw new UnauthorizedAccessException("No access to this activity");
             }
             
             var task = await _context.Tasks
@@ -127,7 +128,7 @@ namespace CirendsAPI.Services
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
 
             if (task == null)
-                throw new ArgumentException("Task not found");
+                throw new NotFoundException("Task not found");
 
             var hasAccess = task.Activity.CreatedByUserId == userId || 
                            task.Activity.ActivityUsers.Any(au => au.UserId == userId);
@@ -179,7 +180,7 @@ namespace CirendsAPI.Services
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
 
             if (task == null)
-                throw new ArgumentException("Task not found");
+                throw new NotFoundException("Task not found");
 
             var isCreator = task.CreatedByUserId == userId;
             var isActivityCreator = task.Activity.CreatedByUserId == userId;
