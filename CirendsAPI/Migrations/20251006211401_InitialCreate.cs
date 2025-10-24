@@ -20,11 +20,8 @@ namespace CirendsAPI.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Email = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    PasswordHash = table.Column<string>(type: "text", nullable: false),
-                    Role = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    PasswordHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -84,43 +81,6 @@ namespace CirendsAPI.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Invitations",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    ActivityId = table.Column<int>(type: "integer", nullable: false),
-                    InvitedByUserId = table.Column<int>(type: "integer", nullable: false),
-                    InvitedUserId = table.Column<int>(type: "integer", nullable: false),
-                    Status = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    RespondedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    Message = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Invitations", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Invitations_Activities_ActivityId",
-                        column: x => x.ActivityId,
-                        principalTable: "Activities",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Invitations_Users_InvitedByUserId",
-                        column: x => x.InvitedByUserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Invitations_Users_InvitedUserId",
-                        column: x => x.InvitedUserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Tasks",
                 columns: table => new
                 {
@@ -174,18 +134,25 @@ namespace CirendsAPI.Migrations
                     ExpenseDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    TaskId = table.Column<int>(type: "integer", nullable: false),
+                    ActivityId = table.Column<int>(type: "integer", nullable: false),
+                    TaskId = table.Column<int>(type: "integer", nullable: true),
                     PaidByUserId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Expenses", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_Expenses_Activities_ActivityId",
+                        column: x => x.ActivityId,
+                        principalTable: "Activities",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
                         name: "FK_Expenses_Tasks_TaskId",
                         column: x => x.TaskId,
                         principalTable: "Tasks",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Expenses_Users_PaidByUserId",
                         column: x => x.PaidByUserId,
@@ -236,6 +203,11 @@ namespace CirendsAPI.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Expenses_ActivityId",
+                table: "Expenses",
+                column: "ActivityId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Expenses_PaidByUserId",
                 table: "Expenses",
                 column: "PaidByUserId");
@@ -255,21 +227,6 @@ namespace CirendsAPI.Migrations
                 name: "IX_ExpenseShares_UserId",
                 table: "ExpenseShares",
                 column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Invitations_ActivityId",
-                table: "Invitations",
-                column: "ActivityId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Invitations_InvitedByUserId",
-                table: "Invitations",
-                column: "InvitedByUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Invitations_InvitedUserId",
-                table: "Invitations",
-                column: "InvitedUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tasks_ActivityId",
@@ -301,9 +258,6 @@ namespace CirendsAPI.Migrations
 
             migrationBuilder.DropTable(
                 name: "ExpenseShares");
-
-            migrationBuilder.DropTable(
-                name: "Invitations");
 
             migrationBuilder.DropTable(
                 name: "Expenses");

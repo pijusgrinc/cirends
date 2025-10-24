@@ -45,10 +45,6 @@ namespace CirendsAPI.Controllers
 
                 var tasks = await _context.Tasks
                     .AsNoTracking()
-                    .Include(t => t.AssignedTo)
-                    .Include(t => t.CreatedBy)
-                    .Include(t => t.Expenses)
-                        .ThenInclude(e => e.PaidBy)
                     .Where(t => t.ActivityId == activityId)
                     .Select(t => new TaskDto
                     {
@@ -59,46 +55,7 @@ namespace CirendsAPI.Controllers
                         Priority = (int)t.Priority,
                         Status = (int)t.Status,
                         ActivityId = t.ActivityId,
-                        CreatedAt = t.CreatedAt,
-                        UpdatedAt = t.UpdatedAt,
-                        CompletedAt = t.CompletedAt,
-                        AssignedTo = t.AssignedTo != null ? new UserDto
-                        {
-                            Id = t.AssignedTo.Id,
-                            Name = t.AssignedTo.Name,
-                            Email = t.AssignedTo.Email,
-                            Role = t.AssignedTo.Role,
-                            CreatedAt = t.AssignedTo.CreatedAt
-                        } : null,
-                        CreatedBy = t.CreatedBy != null ? new UserDto
-                        {
-                            Id = t.CreatedBy.Id,
-                            Name = t.CreatedBy.Name,
-                            Email = t.CreatedBy.Email,
-                            Role = t.CreatedBy.Role,
-                            CreatedAt = t.CreatedBy.CreatedAt
-                        } : null,
-                        Expenses = t.Expenses.Select(e => new ExpenseDto
-                        {
-                            Id = e.Id,
-                            Name = e.Name,
-                            Description = e.Description,
-                            Amount = e.Amount,
-                            Currency = e.Currency,
-                            ExpenseDate = e.ExpenseDate,
-                            CreatedAt = e.CreatedAt,
-                            UpdatedAt = e.UpdatedAt,
-                            TaskId = e.TaskId,
-                            PaidBy = e.PaidBy != null ? new UserDto
-                            {
-                                Id = e.PaidBy.Id,
-                                Name = e.PaidBy.Name,
-                                Email = e.PaidBy.Email,
-                                Role = e.PaidBy.Role,
-                                CreatedAt = e.PaidBy.CreatedAt
-                            } : null,
-                            ExpenseShares = new List<ExpenseShareDto>()
-                        }).ToList()
+                        CreatedAt = t.CreatedAt
                     })
                     .ToListAsync();
 
@@ -133,13 +90,6 @@ namespace CirendsAPI.Controllers
 
                 var task = await _context.Tasks
                     .AsNoTracking()
-                    .Include(t => t.AssignedTo)
-                    .Include(t => t.CreatedBy)
-                    .Include(t => t.Expenses)
-                        .ThenInclude(e => e.PaidBy)
-                    .Include(t => t.Expenses)
-                        .ThenInclude(e => e.ExpenseShares)
-                            .ThenInclude(es => es.User)
                     .FirstOrDefaultAsync(t => t.Id == id && t.ActivityId == activityId);
 
                 if (task == null)
@@ -147,7 +97,7 @@ namespace CirendsAPI.Controllers
                     return NotFound(new { message = "Task not found or does not belong to this activity", error = "TASK_NOT_FOUND" });
                 }
 
-                var taskDto = new TaskDto
+                return Ok(new TaskDto
                 {
                     Id = task.Id,
                     Name = task.Name,
@@ -156,65 +106,8 @@ namespace CirendsAPI.Controllers
                     Priority = (int)task.Priority,
                     Status = (int)task.Status,
                     ActivityId = task.ActivityId,
-                    CreatedAt = task.CreatedAt,
-                    UpdatedAt = task.UpdatedAt,
-                    CompletedAt = task.CompletedAt,
-                    AssignedTo = task.AssignedTo != null ? new UserDto
-                    {
-                        Id = task.AssignedTo.Id,
-                        Name = task.AssignedTo.Name,
-                        Email = task.AssignedTo.Email,
-                        Role = task.AssignedTo.Role,
-                        CreatedAt = task.AssignedTo.CreatedAt
-                    } : null,
-                    CreatedBy = task.CreatedBy != null ? new UserDto
-                    {
-                        Id = task.CreatedBy.Id,
-                        Name = task.CreatedBy.Name,
-                        Email = task.CreatedBy.Email,
-                        Role = task.CreatedBy.Role,
-                        CreatedAt = task.CreatedBy.CreatedAt
-                    } : null,
-                    Expenses = task.Expenses.Select(e => new ExpenseDto
-                    {
-                        Id = e.Id,
-                        Name = e.Name,
-                        Description = e.Description,
-                        Amount = e.Amount,
-                        Currency = e.Currency,
-                        ExpenseDate = e.ExpenseDate,
-                        CreatedAt = e.CreatedAt,
-                        UpdatedAt = e.UpdatedAt,
-                        TaskId = e.TaskId,
-                        PaidBy = e.PaidBy != null ? new UserDto
-                        {
-                            Id = e.PaidBy.Id,
-                            Name = e.PaidBy.Name,
-                            Email = e.PaidBy.Email,
-                            Role = e.PaidBy.Role,
-                            CreatedAt = e.PaidBy.CreatedAt
-                        } : null,
-                        ExpenseShares = e.ExpenseShares.Select(es => new ExpenseShareDto
-                        {
-                            Id = es.Id,
-                            UserId = es.UserId,
-                            ShareAmount = es.ShareAmount,
-                            SharePercentage = es.SharePercentage,
-                            IsPaid = es.IsPaid,
-                            PaidAt = es.PaidAt,
-                            User = es.User != null ? new UserDto
-                            {
-                                Id = es.User.Id,
-                                Name = es.User.Name,
-                                Email = es.User.Email,
-                                Role = es.User.Role,
-                                CreatedAt = es.User.CreatedAt
-                            } : null
-                        }).ToList()
-                    }).ToList()
-                };
-
-                return Ok(taskDto);
+                    CreatedAt = task.CreatedAt
+                });
             }
             catch (Exception ex)
             {
@@ -253,11 +146,6 @@ namespace CirendsAPI.Controllers
                     return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
                 }
 
-                if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
-                {
-                    return ValidationHelper.InvalidAuthenticationResponse();
-                }
-
                 var task = new TaskItem
                 {
                     Name = createDto.Name.Trim(),
@@ -266,17 +154,12 @@ namespace CirendsAPI.Controllers
                     Priority = (TaskItemPriority)createDto.Priority,
                     Status = TaskItemStatus.Pending,
                     ActivityId = activityId,
-                    AssignedToUserId = createDto.AssignedToUserId,
-                    CreatedByUserId = userId,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedByUserId = ValidationHelper.TryGetCurrentUserId(User, out var userId) ? userId : 0,
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 _context.Tasks.Add(task);
                 await _context.SaveChangesAsync();
-
-                var createdByUser = await _context.Users.FindAsync(userId);
-                var assignedToUser = createDto.AssignedToUserId.HasValue ? await _context.Users.FindAsync(createDto.AssignedToUserId.Value) : null;
 
                 return CreatedAtAction(nameof(GetTask), new { activityId, id = task.Id }, new TaskDto
                 {
@@ -287,26 +170,7 @@ namespace CirendsAPI.Controllers
                     Priority = (int)task.Priority,
                     Status = (int)task.Status,
                     ActivityId = task.ActivityId,
-                    CreatedAt = task.CreatedAt,
-                    UpdatedAt = task.UpdatedAt,
-                    CompletedAt = task.CompletedAt,
-                    AssignedTo = assignedToUser != null ? new UserDto
-                    {
-                        Id = assignedToUser.Id,
-                        Name = assignedToUser.Name,
-                        Email = assignedToUser.Email,
-                        Role = assignedToUser.Role,
-                        CreatedAt = assignedToUser.CreatedAt
-                    } : null,
-                    CreatedBy = createdByUser != null ? new UserDto
-                    {
-                        Id = createdByUser.Id,
-                        Name = createdByUser.Name,
-                        Email = createdByUser.Email,
-                        Role = createdByUser.Role,
-                        CreatedAt = createdByUser.CreatedAt
-                    } : null,
-                    Expenses = new List<ExpenseDto>()
+                    CreatedAt = task.CreatedAt
                 });
             }
             catch (Exception ex)
@@ -350,15 +214,8 @@ namespace CirendsAPI.Controllers
                 if (updateDto.Priority.HasValue)
                     task.Priority = (TaskItemPriority)updateDto.Priority.Value;
                 if (updateDto.Status.HasValue)
-                {
                     task.Status = (TaskItemStatus)updateDto.Status.Value;
-                    if (updateDto.Status.Value == (int)TaskItemStatus.Completed)
-                        task.CompletedAt = DateTime.UtcNow;
-                }
-                if (updateDto.AssignedToUserId.HasValue)
-                    task.AssignedToUserId = updateDto.AssignedToUserId;
 
-                task.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
                 return NoContent();
             }
@@ -415,8 +272,6 @@ namespace CirendsAPI.Controllers
 
         [Range(0, 3)]
         public int Priority { get; set; } = 1;
-
-        public int? AssignedToUserId { get; set; }
     }
 
     public class UpdateTaskDto
@@ -434,7 +289,5 @@ namespace CirendsAPI.Controllers
 
         [Range(0, 2)]
         public int? Status { get; set; }
-
-        public int? AssignedToUserId { get; set; }
     }
 }
