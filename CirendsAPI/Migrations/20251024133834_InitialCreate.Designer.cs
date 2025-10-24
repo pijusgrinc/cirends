@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CirendsAPI.Migrations
 {
     [DbContext(typeof(CirendsDbContext))]
-    [Migration("20251012220717_AddRoleAndInvitations2")]
-    partial class AddRoleAndInvitations2
+    [Migration("20251024133834_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -89,55 +89,6 @@ namespace CirendsAPI.Migrations
                     b.ToTable("ActivityUsers");
                 });
 
-            modelBuilder.Entity("CirendsAPI.Models.Expense", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime>("ExpenseDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("PaidByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TaskId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PaidByUserId");
-
-                    b.HasIndex("TaskId");
-
-                    b.ToTable("Expenses");
-                });
-
             modelBuilder.Entity("CirendsAPI.Models.ExpenseShare", b =>
                 {
                     b.Property<int>("Id")
@@ -191,14 +142,15 @@ namespace CirendsAPI.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("InvitedById")
-                        .HasColumnType("integer");
-
                     b.Property<int>("InvitedByUserId")
                         .HasColumnType("integer");
 
                     b.Property<int>("InvitedUserId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime?>("RespondedAt")
                         .HasColumnType("timestamp with time zone");
@@ -210,7 +162,7 @@ namespace CirendsAPI.Migrations
 
                     b.HasIndex("ActivityId");
 
-                    b.HasIndex("InvitedById");
+                    b.HasIndex("InvitedByUserId");
 
                     b.HasIndex("InvitedUserId");
 
@@ -288,6 +240,9 @@ namespace CirendsAPI.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -295,13 +250,15 @@ namespace CirendsAPI.Migrations
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -311,10 +268,59 @@ namespace CirendsAPI.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Expense", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("ExpenseDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("PaidByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaidByUserId");
+
+                    b.HasIndex("TaskId");
+
+                    b.ToTable("Expenses");
+                });
+
             modelBuilder.Entity("CirendsAPI.Models.Activity", b =>
                 {
                     b.HasOne("CirendsAPI.Models.User", "CreatedBy")
-                        .WithMany("Activities")
+                        .WithMany("ActivitiesCreated")
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -331,7 +337,7 @@ namespace CirendsAPI.Migrations
                         .IsRequired();
 
                     b.HasOne("CirendsAPI.Models.User", "User")
-                        .WithMany()
+                        .WithMany("ActivityUsers")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -341,35 +347,16 @@ namespace CirendsAPI.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("CirendsAPI.Models.Expense", b =>
-                {
-                    b.HasOne("CirendsAPI.Models.User", "PaidBy")
-                        .WithMany("Expenses")
-                        .HasForeignKey("PaidByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("CirendsAPI.Models.TaskItem", "Task")
-                        .WithMany("Expenses")
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PaidBy");
-
-                    b.Navigation("Task");
-                });
-
             modelBuilder.Entity("CirendsAPI.Models.ExpenseShare", b =>
                 {
-                    b.HasOne("CirendsAPI.Models.Expense", "Expense")
+                    b.HasOne("Expense", "Expense")
                         .WithMany("ExpenseShares")
                         .HasForeignKey("ExpenseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("CirendsAPI.Models.User", "User")
-                        .WithMany()
+                        .WithMany("ExpenseShares")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -382,21 +369,21 @@ namespace CirendsAPI.Migrations
             modelBuilder.Entity("CirendsAPI.Models.Invitation", b =>
                 {
                     b.HasOne("CirendsAPI.Models.Activity", "Activity")
-                        .WithMany()
+                        .WithMany("Invitations")
                         .HasForeignKey("ActivityId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("CirendsAPI.Models.User", "InvitedBy")
-                        .WithMany()
-                        .HasForeignKey("InvitedById")
+                        .WithMany("InvitationsSent")
+                        .HasForeignKey("InvitedByUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("CirendsAPI.Models.User", "InvitedUser")
-                        .WithMany()
+                        .WithMany("InvitationsReceived")
                         .HasForeignKey("InvitedUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Activity");
@@ -420,7 +407,7 @@ namespace CirendsAPI.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("CirendsAPI.Models.User", "CreatedBy")
-                        .WithMany()
+                        .WithMany("CreatedTasks")
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -432,16 +419,32 @@ namespace CirendsAPI.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("Expense", b =>
+                {
+                    b.HasOne("CirendsAPI.Models.User", "PaidBy")
+                        .WithMany("ExpensesPaid")
+                        .HasForeignKey("PaidByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CirendsAPI.Models.TaskItem", "Task")
+                        .WithMany("Expenses")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PaidBy");
+
+                    b.Navigation("Task");
+                });
+
             modelBuilder.Entity("CirendsAPI.Models.Activity", b =>
                 {
                     b.Navigation("ActivityUsers");
 
-                    b.Navigation("Tasks");
-                });
+                    b.Navigation("Invitations");
 
-            modelBuilder.Entity("CirendsAPI.Models.Expense", b =>
-                {
-                    b.Navigation("ExpenseShares");
+                    b.Navigation("Tasks");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.TaskItem", b =>
@@ -451,11 +454,26 @@ namespace CirendsAPI.Migrations
 
             modelBuilder.Entity("CirendsAPI.Models.User", b =>
                 {
-                    b.Navigation("Activities");
+                    b.Navigation("ActivitiesCreated");
+
+                    b.Navigation("ActivityUsers");
 
                     b.Navigation("AssignedTasks");
 
-                    b.Navigation("Expenses");
+                    b.Navigation("CreatedTasks");
+
+                    b.Navigation("ExpenseShares");
+
+                    b.Navigation("ExpensesPaid");
+
+                    b.Navigation("InvitationsReceived");
+
+                    b.Navigation("InvitationsSent");
+                });
+
+            modelBuilder.Entity("Expense", b =>
+                {
+                    b.Navigation("ExpenseShares");
                 });
 #pragma warning restore 612, 618
         }

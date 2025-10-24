@@ -41,6 +41,10 @@ namespace CirendsAPI.Controllers
             {
                 var activities = await _context.Activities
                     .AsNoTracking()
+                    .Include(a => a.CreatedBy)
+                    .Include(a => a.Tasks)
+                    .Include(a => a.ActivityUsers)
+                        .ThenInclude(au => au.User)
                     .Where(a => a.CreatedByUserId == userId || 
                            _context.ActivityUsers.Any(au => au.ActivityId == a.Id && au.UserId == userId))
                     .Select(a => new ActivityDto
@@ -51,7 +55,47 @@ namespace CirendsAPI.Controllers
                         StartDate = a.StartDate,
                         EndDate = a.EndDate,
                         Location = a.Location,
-                        CreatedAt = a.CreatedAt
+                        CreatedAt = a.CreatedAt,
+                        UpdatedAt = a.UpdatedAt,
+                        CreatedBy = a.CreatedBy != null ? new UserDto
+                        {
+                            Id = a.CreatedBy.Id,
+                            Name = a.CreatedBy.Name,
+                            Email = a.CreatedBy.Email,
+                            Role = a.CreatedBy.Role,
+                            CreatedAt = a.CreatedBy.CreatedAt
+                        } : null,
+                        Tasks = a.Tasks.Select(t => new TaskDto
+                        {
+                            Id = t.Id,
+                            Name = t.Name,
+                            Description = t.Description,
+                            DueDate = t.DueDate,
+                            Priority = (int)t.Priority,
+                            Status = (int)t.Status,
+                            ActivityId = t.ActivityId,
+                            CreatedAt = t.CreatedAt,
+                            UpdatedAt = t.UpdatedAt,
+                            CompletedAt = t.CompletedAt,
+                            AssignedTo = null,
+                            CreatedBy = null,
+                            Expenses = new List<ExpenseDto>()
+                        }).ToList(),
+                        Participants = a.ActivityUsers.Select(au => new ActivityUserDto
+                        {
+                            ActivityId = au.ActivityId,
+                            UserId = au.UserId,
+                            IsAdmin = au.IsAdmin,
+                            JoinedAt = au.JoinedAt,
+                            User = au.User != null ? new UserDto
+                            {
+                                Id = au.User.Id,
+                                Name = au.User.Name,
+                                Email = au.User.Email,
+                                Role = au.User.Role,
+                                CreatedAt = au.User.CreatedAt
+                            } : null
+                        }).ToList()
                     })
                     .ToListAsync();
 
@@ -87,7 +131,20 @@ namespace CirendsAPI.Controllers
             {
                 var activity = await _context.Activities
                     .AsNoTracking()
+                    .Include(a => a.CreatedBy)
                     .Include(a => a.Tasks)
+                        .ThenInclude(t => t.AssignedTo)
+                    .Include(a => a.Tasks)
+                        .ThenInclude(t => t.CreatedBy)
+                    .Include(a => a.Tasks)
+                        .ThenInclude(t => t.Expenses)
+                            .ThenInclude(e => e.PaidBy)
+                    .Include(a => a.Tasks)
+                        .ThenInclude(t => t.Expenses)
+                            .ThenInclude(e => e.ExpenseShares)
+                                .ThenInclude(es => es.User)
+                    .Include(a => a.ActivityUsers)
+                        .ThenInclude(au => au.User)
                     .FirstOrDefaultAsync(a => a.Id == id);
 
                 if (activity == null)
@@ -97,14 +154,14 @@ namespace CirendsAPI.Controllers
 
                 // Check authorization: creator or participant
                 var hasAccess = activity.CreatedByUserId == userId ||
-                               await _context.ActivityUsers.AnyAsync(au => au.ActivityId == id && au.UserId == userId);
+                               activity.ActivityUsers.Any(au => au.UserId == userId);
 
                 if (!hasAccess)
                 {
                     return Forbid();
                 }
 
-                return Ok(new ActivityDto
+                var activityDto = new ActivityDto
                 {
                     Id = activity.Id,
                     Name = activity.Name,
@@ -112,8 +169,100 @@ namespace CirendsAPI.Controllers
                     StartDate = activity.StartDate,
                     EndDate = activity.EndDate,
                     Location = activity.Location,
-                    CreatedAt = activity.CreatedAt
-                });
+                    CreatedAt = activity.CreatedAt,
+                    UpdatedAt = activity.UpdatedAt,
+                    CreatedBy = activity.CreatedBy != null ? new UserDto
+                    {
+                        Id = activity.CreatedBy.Id,
+                        Name = activity.CreatedBy.Name,
+                        Email = activity.CreatedBy.Email,
+                        Role = activity.CreatedBy.Role,
+                        CreatedAt = activity.CreatedBy.CreatedAt
+                    } : null,
+                    Tasks = activity.Tasks.Select(t => new TaskDto
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        Description = t.Description,
+                        DueDate = t.DueDate,
+                        Priority = (int)t.Priority,
+                        Status = (int)t.Status,
+                        ActivityId = t.ActivityId,
+                        CreatedAt = t.CreatedAt,
+                        UpdatedAt = t.UpdatedAt,
+                        CompletedAt = t.CompletedAt,
+                        AssignedTo = t.AssignedTo != null ? new UserDto
+                        {
+                            Id = t.AssignedTo.Id,
+                            Name = t.AssignedTo.Name,
+                            Email = t.AssignedTo.Email,
+                            Role = t.AssignedTo.Role,
+                            CreatedAt = t.AssignedTo.CreatedAt
+                        } : null,
+                        CreatedBy = t.CreatedBy != null ? new UserDto
+                        {
+                            Id = t.CreatedBy.Id,
+                            Name = t.CreatedBy.Name,
+                            Email = t.CreatedBy.Email,
+                            Role = t.CreatedBy.Role,
+                            CreatedAt = t.CreatedBy.CreatedAt
+                        } : null,
+                        Expenses = t.Expenses.Select(e => new ExpenseDto
+                        {
+                            Id = e.Id,
+                            Name = e.Name,
+                            Description = e.Description,
+                            Amount = e.Amount,
+                            Currency = e.Currency,
+                            ExpenseDate = e.ExpenseDate,
+                            CreatedAt = e.CreatedAt,
+                            UpdatedAt = e.UpdatedAt,
+                            TaskId = e.TaskId,
+                            PaidBy = e.PaidBy != null ? new UserDto
+                            {
+                                Id = e.PaidBy.Id,
+                                Name = e.PaidBy.Name,
+                                Email = e.PaidBy.Email,
+                                Role = e.PaidBy.Role,
+                                CreatedAt = e.PaidBy.CreatedAt
+                            } : null,
+                            ExpenseShares = e.ExpenseShares.Select(es => new ExpenseShareDto
+                            {
+                                Id = es.Id,
+                                UserId = es.UserId,
+                                ShareAmount = es.ShareAmount,
+                                SharePercentage = es.SharePercentage,
+                                IsPaid = es.IsPaid,
+                                PaidAt = es.PaidAt,
+                                User = es.User != null ? new UserDto
+                                {
+                                    Id = es.User.Id,
+                                    Name = es.User.Name,
+                                    Email = es.User.Email,
+                                    Role = es.User.Role,
+                                    CreatedAt = es.User.CreatedAt
+                                } : null
+                            }).ToList()
+                        }).ToList()
+                    }).ToList(),
+                    Participants = activity.ActivityUsers.Select(au => new ActivityUserDto
+                    {
+                        ActivityId = au.ActivityId,
+                        UserId = au.UserId,
+                        IsAdmin = au.IsAdmin,
+                        JoinedAt = au.JoinedAt,
+                        User = au.User != null ? new UserDto
+                        {
+                            Id = au.User.Id,
+                            Name = au.User.Name,
+                            Email = au.User.Email,
+                            Role = au.User.Role,
+                            CreatedAt = au.User.CreatedAt
+                        } : null
+                    }).ToList()
+                };
+
+                return Ok(activityDto);
             }
             catch (Exception ex)
             {
@@ -157,6 +306,7 @@ namespace CirendsAPI.Controllers
 
             try
             {
+                var user = await _context.Users.FindAsync(userId);
                 var activity = new Activity
                 {
                     Name = createDto.Name.Trim(),
@@ -180,7 +330,18 @@ namespace CirendsAPI.Controllers
                     StartDate = activity.StartDate,
                     EndDate = activity.EndDate,
                     Location = activity.Location,
-                    CreatedAt = activity.CreatedAt
+                    CreatedAt = activity.CreatedAt,
+                    UpdatedAt = activity.UpdatedAt,
+                    CreatedBy = user != null ? new UserDto
+                    {
+                        Id = user.Id,
+                        Name = user.Name,
+                        Email = user.Email,
+                        Role = user.Role,
+                        CreatedAt = user.CreatedAt
+                    } : null,
+                    Tasks = new List<TaskDto>(),
+                    Participants = new List<ActivityUserDto>()
                 });
             }
             catch (DbUpdateException ex)

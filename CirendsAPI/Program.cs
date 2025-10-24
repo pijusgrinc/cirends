@@ -9,6 +9,8 @@ using CirendsAPI.Mappings;
 using CirendsAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddConsole();
+
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -98,8 +100,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -121,6 +122,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<CirendsDbContext>();
     context.Database.EnsureCreated();
+    context.Database.Migrate();
 }
 
 app.Run();
