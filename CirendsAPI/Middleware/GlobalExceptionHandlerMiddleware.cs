@@ -1,6 +1,6 @@
+using CirendsAPI.Exceptions;
 using System.Net;
 using System.Text.Json;
-using CirendsAPI.Exceptions;
 
 namespace CirendsAPI.Middleware
 {

@@ -1,11 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using CirendsAPI.Data;
 using CirendsAPI.DTOs;
 using CirendsAPI.Models;
 using CirendsAPI.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace CirendsAPI.Controllers
 {
@@ -71,7 +70,7 @@ namespace CirendsAPI.Controllers
                     Name = registerDto.Name.Trim(),
                     Email = registerDto.Email.ToLower().Trim(),
                     PasswordHash = hashedPassword,
-                    Role = "User", 
+                    Role = "User",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     IsActive = true
@@ -187,7 +186,7 @@ namespace CirendsAPI.Controllers
         }
 
         /// <summary>
-        /// Hash password using PBKDF2
+        /// Hash password using PBKDF2 with SHA256
         /// </summary>
         private static string HashPassword(string password)
         {

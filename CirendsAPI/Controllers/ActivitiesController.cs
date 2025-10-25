@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 
 namespace CirendsAPI.Controllers
 {
@@ -41,7 +40,7 @@ namespace CirendsAPI.Controllers
             {
                 var activities = await _context.Activities
                     .AsNoTracking()
-                    .Where(a => a.CreatedByUserId == userId || 
+                    .Where(a => a.CreatedByUserId == userId ||
                            _context.ActivityUsers.Any(au => au.ActivityId == a.Id && au.UserId == userId))
                     .Select(a => new ActivityDto
                     {
@@ -87,7 +86,10 @@ namespace CirendsAPI.Controllers
             {
                 var activity = await _context.Activities
                     .AsNoTracking()
+                    .Include(a => a.CreatedBy)
                     .Include(a => a.Tasks)
+                    .Include(a => a.ActivityUsers)
+                        .ThenInclude(au => au.User)
                     .FirstOrDefaultAsync(a => a.Id == id);
 
                 if (activity == null)
@@ -112,7 +114,69 @@ namespace CirendsAPI.Controllers
                     StartDate = activity.StartDate,
                     EndDate = activity.EndDate,
                     Location = activity.Location,
-                    CreatedAt = activity.CreatedAt
+                    CreatedAt = activity.CreatedAt,
+                    UpdatedAt = activity.UpdatedAt,
+                    CreatedBy = new UserDto
+                    {
+                        Id = activity.CreatedBy.Id,
+                        Name = activity.CreatedBy.Name,
+                        Email = activity.CreatedBy.Email,
+                        Role = activity.CreatedBy.Role,
+                        CreatedAt = activity.CreatedBy.CreatedAt,
+                        UpdatedAt = activity.CreatedBy.UpdatedAt,
+                        IsActive = activity.CreatedBy.IsActive
+                    },
+                    Tasks = activity.Tasks.Select(t => new TaskItemDto
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        Description = t.Description,
+                        DueDate = t.DueDate,
+                        Status = t.Status,
+                        Priority = t.Priority,
+                        CreatedAt = t.CreatedAt,
+                        UpdatedAt = t.UpdatedAt,
+                        CompletedAt = t.CompletedAt,
+                        ActivityId = t.ActivityId,
+                        AssignedTo = t.AssignedTo != null ? new UserDto
+                        {
+                            Id = t.AssignedTo.Id,
+                            Name = t.AssignedTo.Name,
+                            Email = t.AssignedTo.Email,
+                            Role = t.AssignedTo.Role,
+                            CreatedAt = t.AssignedTo.CreatedAt,
+                            UpdatedAt = t.AssignedTo.UpdatedAt,
+                            IsActive = t.AssignedTo.IsActive
+                        } : null,
+                        CreatedBy = new UserDto
+                        {
+                            Id = t.CreatedBy.Id,
+                            Name = t.CreatedBy.Name,
+                            Email = t.CreatedBy.Email,
+                            Role = t.CreatedBy.Role,
+                            CreatedAt = t.CreatedBy.CreatedAt,
+                            UpdatedAt = t.CreatedBy.UpdatedAt,
+                            IsActive = t.CreatedBy.IsActive
+                        },
+                        Expenses = new List<ExpenseDto>()
+                    }).ToList(),
+                    Participants = activity.ActivityUsers.Select(p => new ActivityUserDto
+                    {
+                        ActivityId = p.ActivityId,
+                        UserId = p.UserId,
+                        IsAdmin = p.IsAdmin,
+                        JoinedAt = p.JoinedAt,
+                        User = new UserDto
+                        {
+                            Id = p.User.Id,
+                            Name = p.User.Name,
+                            Email = p.User.Email,
+                            Role = p.User.Role,
+                            CreatedAt = p.User.CreatedAt,
+                            UpdatedAt = p.User.UpdatedAt,
+                            IsActive = p.User.IsActive
+                        }
+                    }).ToList()
                 });
             }
             catch (Exception ex)

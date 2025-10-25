@@ -1,12 +1,13 @@
-using Microsoft.EntityFrameworkCore;
 using CirendsAPI.Data;
 using CirendsAPI.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CirendsAPI.Services
 {
     public interface IActivityAccessService
     {
         Task ValidateUserAccessAsync(int activityId, int userId);
+
         Task<Activity> GetActivityWithParticipantsAsync(int activityId, int userId);
     }
 
@@ -22,7 +23,7 @@ namespace CirendsAPI.Services
         public async Task ValidateUserAccessAsync(int activityId, int userId)
         {
             var hasAccess = await _context.Activities
-                .AnyAsync(a => a.Id == activityId && 
+                .AnyAsync(a => a.Id == activityId &&
                     (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId)));
 
             if (!hasAccess)
@@ -33,7 +34,7 @@ namespace CirendsAPI.Services
         {
             var activity = await _context.Activities
                 .Include(a => a.ActivityUsers)
-                .FirstOrDefaultAsync(a => a.Id == activityId && 
+                .FirstOrDefaultAsync(a => a.Id == activityId &&
                     (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId)));
 
             if (activity == null)

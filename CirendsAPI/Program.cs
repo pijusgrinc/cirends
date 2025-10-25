@@ -1,12 +1,12 @@
+using CirendsAPI.Data;
+using CirendsAPI.Mappings;
+using CirendsAPI.Middleware;
+using CirendsAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Reflection;
 using System.Text;
-using CirendsAPI.Data;
-using CirendsAPI.Services;
-using CirendsAPI.Mappings;
-using CirendsAPI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,7 +89,7 @@ builder.Services.AddSwaggerGen(c =>
 
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    
+
     if (File.Exists(xmlPath))
     {
         c.IncludeXmlComments(xmlPath);
@@ -98,29 +98,23 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
+
 app.UseCors("AllowVueApp");
 
-// Add global exception handler
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Create database if it doesn't exist
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<CirendsDbContext>();
-    context.Database.EnsureCreated();
-}
 
 app.Run();

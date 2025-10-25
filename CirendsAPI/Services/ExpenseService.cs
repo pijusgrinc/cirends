@@ -1,18 +1,21 @@
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using CirendsAPI.Data;
 using CirendsAPI.DTOs;
-using CirendsAPI.Models;
 using CirendsAPI.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace CirendsAPI.Services
 {
     public interface IExpenseService
     {
         Task<IEnumerable<ExpenseDto>> GetExpensesAsync(int activityId, int taskId, int userId);
+
         Task<ExpenseDto> GetExpenseAsync(int activityId, int taskId, int expenseId, int userId);
+
         Task<ExpenseDto> CreateExpenseAsync(int activityId, int taskId, int userId, CreateExpenseDto createExpenseDto);
+
         Task UpdateExpenseAsync(int activityId, int taskId, int expenseId, int userId, UpdateExpenseDto updateExpenseDto);
+
         Task DeleteExpenseAsync(int activityId, int taskId, int expenseId, int userId);
     }
 
@@ -46,6 +49,7 @@ namespace CirendsAPI.Services
 
             return _mapper.Map<ExpenseDto>(expense);
         }
+
         public async Task<IEnumerable<ExpenseDto>> GetExpensesAsync(int activityId, int taskId, int userId)
         {
             var task = await _context.Tasks
@@ -99,7 +103,7 @@ namespace CirendsAPI.Services
 
             _context.Expenses.Add(expense);
             await _context.SaveChangesAsync();
-            
+
             var createdExpense = await _context.Expenses
             .Include(e => e.PaidBy)
             .Include(e => e.ExpenseShares)

@@ -90,6 +90,9 @@ namespace CirendsAPI.Controllers
 
                 var task = await _context.Tasks
                     .AsNoTracking()
+                    .Include(t => t.Expenses)
+                    .Include(t => t.CreatedBy)
+                    .Include(t => t.AssignedTo)
                     .FirstOrDefaultAsync(t => t.Id == id && t.ActivityId == activityId);
 
                 if (task == null)
@@ -97,16 +100,61 @@ namespace CirendsAPI.Controllers
                     return NotFound(new { message = "Task not found or does not belong to this activity", error = "TASK_NOT_FOUND" });
                 }
 
-                return Ok(new TaskDto
+                return Ok(new TaskItemDto
                 {
                     Id = task.Id,
                     Name = task.Name,
                     Description = task.Description,
                     DueDate = task.DueDate,
-                    Priority = (int)task.Priority,
-                    Status = (int)task.Status,
+                    Priority = task.Priority,
+                    Status = task.Status,
                     ActivityId = task.ActivityId,
-                    CreatedAt = task.CreatedAt
+                    CreatedAt = task.CreatedAt,
+                    UpdatedAt = task.UpdatedAt,
+                    CompletedAt = task.CompletedAt,
+                    AssignedTo = task.AssignedTo != null ? new UserDto
+                    {
+                        Id = task.AssignedTo.Id,
+                        Name = task.AssignedTo.Name,
+                        Email = task.AssignedTo.Email,
+                        Role = task.AssignedTo.Role,
+                        CreatedAt = task.AssignedTo.CreatedAt,
+                        UpdatedAt = task.AssignedTo.UpdatedAt,
+                        IsActive = task.AssignedTo.IsActive
+                    } : null,
+                    CreatedBy = new UserDto
+                    {
+                        Id = task.CreatedBy.Id,
+                        Name = task.CreatedBy.Name,
+                        Email = task.CreatedBy.Email,
+                        Role = task.CreatedBy.Role,
+                        CreatedAt = task.CreatedBy.CreatedAt,
+                        UpdatedAt = task.CreatedBy.UpdatedAt,
+                        IsActive = task.CreatedBy.IsActive
+                    },
+                    Expenses = task.Expenses.Select(e => new ExpenseDto
+                    {
+                        Id = e.Id,
+                        Name = e.Name,
+                        Description = e.Description,
+                        Amount = e.Amount,
+                        Currency = e.Currency,
+                        ExpenseDate = e.ExpenseDate,
+                        CreatedAt = e.CreatedAt,
+                        UpdatedAt = e.UpdatedAt,
+                        TaskId = e.TaskId,
+                        PaidBy = e.PaidBy != null ? new UserDto
+                        {
+                            Id = e.PaidBy.Id,
+                            Name = e.PaidBy.Name,
+                            Email = e.PaidBy.Email,
+                            Role = e.PaidBy.Role,
+                            CreatedAt = e.PaidBy.CreatedAt,
+                            UpdatedAt = e.PaidBy.UpdatedAt,
+                            IsActive = e.PaidBy.IsActive
+                        } : null,
+                        ExpenseShares = new List<ExpenseShareDto>()
+                    }).ToList()
                 });
             }
             catch (Exception ex)

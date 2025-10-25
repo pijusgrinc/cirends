@@ -48,7 +48,7 @@ namespace CirendsAPI.Mappings
                 .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User));
 
             CreateMap<CreateExpenseShareDto, ExpenseShare>();
-            
+
             // Backward compatibility mapping
             CreateMap<ExpenseShareRequest, ExpenseShare>();
         }

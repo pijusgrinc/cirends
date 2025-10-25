@@ -6,20 +6,20 @@ namespace CirendsAPI.Models
 
     public class ActivityUser
     {
-            public int ActivityId { get; set; }
+        public int ActivityId { get; set; }
 
-            public int UserId { get; set; }
+        public int UserId { get; set; }
 
-            public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+        public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 
-            public bool IsAdmin { get; set; } = false;
+        public bool IsAdmin { get; set; } = false;
 
-            // Navigation properties
-            [ForeignKey("ActivityId")]
-            public Activity? Activity { get; set; }
+        // Navigation properties
+        [ForeignKey("ActivityId")]
+        public Activity? Activity { get; set; }
 
-            [ForeignKey("UserId")]
-            public User? User { get; set; }
+        [ForeignKey("UserId")]
+        public User? User { get; set; }
     }
 
     // Junction table for expense sharing

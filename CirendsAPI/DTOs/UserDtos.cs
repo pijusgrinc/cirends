@@ -32,10 +32,18 @@ namespace CirendsAPI.DTOs
 
     public class UserDto
     {
+        [Key]
         public int Id { get; set; }
+
+        [StringLength(100)]
         public string Name { get; set; } = string.Empty;
+
+        [StringLength(255)]
         public string Email { get; set; } = string.Empty;
+
+        [StringLength(50)]
         public string Role { get; set; } = "User";
+
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public bool IsActive { get; set; }

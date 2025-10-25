@@ -28,6 +28,7 @@ namespace CirendsAPI.Models
 
         // Navigation properties
         public ICollection<Activity> ActivitiesCreated { get; set; } = new List<Activity>();
+
         public ICollection<ActivityUser> ActivityUsers { get; set; } = new List<ActivityUser>();
         public ICollection<TaskItem> AssignedTasks { get; set; } = new List<TaskItem>();
         public ICollection<TaskItem> CreatedTasks { get; set; } = new List<TaskItem>();

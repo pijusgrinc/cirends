@@ -1,876 +1,876 @@
 {
-	"info": {
-		"_postman_id": "e1724630-0cc0-465d-8ee6-9e5091bdea88",
-		"name": "Cirends API - Complete Tests",
-		"description": "Išsamus API testų rinkinys su hierarcijos Activity → Task → Expense tikrinimais",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "48998640",
-		"_collection_link": "https://pijusgrinc-2704992.postman.co/workspace/Pijus-Grincevi%C4%8Dius's-Workspace~9c563811-0a27-48f4-810b-2fc7ec316855/collection/48998640-e1724630-0cc0-465d-8ee6-9e5091bdea88?action=share&source=collection_link&creator=48998640"
-	},
-	"item": [
-		{
-			"name": "1. Authentication",
-			"item": [
-				{
-					"name": "Register",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Registration successful\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Response structure correct\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('token');",
-									"    pm.expect(jsonData).to.have.property('user');",
-									"    pm.expect(jsonData.user).to.have.property('id');",
-									"    pm.expect(jsonData.user).to.have.property('name');",
-									"    pm.expect(jsonData.user).to.have.property('email');",
-									"});",
-									"",
-									"pm.test(\"Save credentials\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set(\"token\", jsonData.token);",
-									"    pm.collectionVariables.set(\"userId\", jsonData.user.id);",
-									"    pm.collectionVariables.set(\"userEmail\", jsonData.user.email);",
-									"    console.log(\"✅ User registered:\", jsonData.user.email);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"Test User {{$timestamp}}\",\n  \"email\": \"test{{$timestamp}}@cirends.com\",\n  \"password\": \"Test123!\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/auth/register",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"auth",
-								"register"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Login successful\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Token received\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.token).to.be.a('string');",
-									"    pm.expect(jsonData.token.length).to.be.above(50);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"Test123!\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/auth/login",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"auth",
-								"login"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "2. Activities",
-			"item": [
-				{
-					"name": "Create Activity",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Activity created\", function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test(\"Activity structure correct\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData).to.have.property('name');",
-									"    pm.expect(jsonData).to.have.property('createdBy');",
-									"    pm.expect(jsonData).to.have.property('participants');",
-									"    pm.expect(jsonData).to.have.property('tasks');",
-									"    pm.collectionVariables.set(\"activityId\", jsonData.id);",
-									"    console.log(\"✅ Activity created with ID:\", jsonData.id);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"Vasaros išvyka {{$timestamp}}\",\n  \"description\": \"Kelionė į Nidą su draugais\",\n  \"startDate\": \"2024-07-15T10:00:00Z\",\n  \"endDate\": \"2024-07-18T18:00:00Z\",\n  \"location\": \"Nida, Lietuva\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/activities",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Activity by ID",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Activity retrieved\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Activity details correct\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.id).to.equal(parseInt(pm.collectionVariables.get('activityId')));",
-									"    pm.expect(jsonData.createdBy.id).to.equal(parseInt(pm.collectionVariables.get('userId')));",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update Activity",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Activity updated\", function () {",
-									"    pm.response.to.have.status(204);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"description\": \"Atnaujinta kelionės informacija\",\n  \"location\": \"Nida + Juodkrantė\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "3. Tasks",
-			"item": [
-				{
-					"name": "Create Task",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Task created\", function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test(\"Task belongs to activity\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData.activityId).to.equal(parseInt(pm.collectionVariables.get('activityId')));",
-									"    pm.collectionVariables.set(\"taskId\", jsonData.id);",
-									"    console.log(\"✅ Task created with ID:\", jsonData.id);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"Rezervuoti apgyvendinimą\",\n  \"description\": \"Surasti ir rezervuoti vietą Nidoje\",\n  \"dueDate\": \"2024-07-10T12:00:00Z\",\n  \"priority\": 2\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Task by ID",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Task retrieved\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Task hierarchy correct\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.id).to.equal(parseInt(pm.collectionVariables.get('taskId')));",
-									"    pm.expect(jsonData.activityId).to.equal(parseInt(pm.collectionVariables.get('activityId')));",
-									"    pm.expect(jsonData).to.have.property('expenses');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"{{taskId}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Complete Task",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Task completed\", function () {",
-									"    pm.response.to.have.status(204);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"status\": 2\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"{{taskId}}"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "4. Expenses (Hierarchy Tests)",
-			"item": [
-				{
-					"name": "Create Simple Expense",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Expense created\", function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test(\"Expense hierarchy correct\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData.taskId).to.equal(parseInt(pm.collectionVariables.get('taskId')));",
-									"    pm.expect(jsonData.paidBy.id).to.equal(parseInt(pm.collectionVariables.get('userId')));",
-									"    pm.collectionVariables.set(\"expenseId\", jsonData.id);",
-									"    console.log(\"✅ Expense created with ID:\", jsonData.id);",
-									"});"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"Apgyvendinimas\",\n  \"description\": \"Nakvynė viešbutyje\",\n  \"amount\": 250.00,\n  \"currency\": \"EUR\",\n  \"expenseDate\": \"2024-07-15T14:00:00Z\",\n  \"shares\": []\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"{{taskId}}",
-								"expenses"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Create Expense with Shares",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Expense with shares created\", function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test(\"Shares calculated correctly\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.expenseShares).to.be.an('array');",
-									"    if (jsonData.expenseShares.length > 0) {",
-									"        var totalShares = jsonData.expenseShares.reduce((sum, share) => sum + share.shareAmount, 0);",
-									"        pm.expect(totalShares).to.equal(jsonData.amount);",
-									"    }",
-									"    pm.collectionVariables.set(\"sharedExpenseId\", jsonData.id);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"Maistas\",\n  \"description\": \"Pietūs restorane\",\n  \"amount\": 80.00,\n  \"currency\": \"EUR\",\n  \"expenseDate\": \"2024-07-16T12:00:00Z\",\n  \"shares\": [\n    {\n      \"userId\": {{userId}},\n      \"shareAmount\": 80.00\n    }\n  ]\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"{{taskId}}",
-								"expenses"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get All Task Expenses",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Expenses retrieved\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"All expenses belong to task\", function () {",
-									"    var expenses = pm.response.json();",
-									"    pm.expect(expenses).to.be.an('array');",
-									"    expenses.forEach(function(expense) {",
-									"        pm.expect(expense.taskId).to.equal(parseInt(pm.collectionVariables.get('taskId')));",
-									"    });",
-									"    console.log(\"✅ Found\", expenses.length, \"expenses for task\");",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"{{taskId}}",
-								"expenses"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Update Expense",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Expense updated\", function () {",
-									"    pm.response.to.have.status(204);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"amount\": 280.00,\n  \"description\": \"Kaina pakilo dėl infliacijos\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses/{{expenseId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"{{taskId}}",
-								"expenses",
-								"{{expenseId}}"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "5. Error Cases & Security",
-			"item": [
-				{
-					"name": "Access Nonexistent Task",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Returns 404 for nonexistent task\", function () {",
-									"    pm.response.to.have.status(404);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/99999",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"99999"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Create Expense for Nonexistent Task",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Returns 404 for nonexistent task\", function () {",
-									"    pm.response.to.have.status(404);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"name\": \"Invalid Expense\",\n  \"amount\": 100.00\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/99999/expenses",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"99999",
-								"expenses"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Wrong Hierarchy Access",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Returns 404 for wrong activity\", function () {",
-									"    pm.response.to.have.status(404);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/activities/99999/tasks/{{taskId}}/expenses",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"99999",
-								"tasks",
-								"{{taskId}}",
-								"expenses"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "6. Cleanup",
-			"item": [
-				{
-					"name": "Delete Expenses",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Expense deleted\", function () {",
-									"    pm.response.to.have.status(204);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses/{{expenseId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"{{taskId}}",
-								"expenses",
-								"{{expenseId}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Task",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Task deleted\", function () {",
-									"    pm.response.to.have.status(204);",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}",
-								"tasks",
-								"{{taskId}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Activity",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Activity deleted\", function () {",
-									"    pm.response.to.have.status(204);",
-									"});"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/activities/{{activityId}}",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"activities",
-								"{{activityId}}"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		}
-	],
-	"auth": {
-		"type": "bearer",
-		"bearer": [
-			{
-				"key": "token",
-				"value": "{{token}}",
-				"type": "string"
-			}
-		]
-	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"requests": {},
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"requests": {},
-				"exec": [
-					""
-				]
-			}
-		}
-	],
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://localhost:5240/api"
-		},
-		{
-			"key": "token",
-			"value": ""
-		},
-		{
-			"key": "activityId",
-			"value": ""
-		},
-		{
-			"key": "taskId",
-			"value": ""
-		},
-		{
-			"key": "expenseId",
-			"value": ""
-		},
-		{
-			"key": "sharedExpenseId",
-			"value": ""
-		},
-		{
-			"key": "userId",
-			"value": ""
-		},
-		{
-			"key": "userEmail",
-			"value": ""
-		}
-	]
+  "info": {
+    "_postman_id": "e1724630-0cc0-465d-8ee6-9e5091bdea88",
+    "name": "Cirends API - Complete Tests",
+    "description": "Išsamus API testų rinkinys su hierarcijos Activity → Task → Expense tikrinimais",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "48998640",
+    "_collection_link": "https://pijusgrinc-2704992.postman.co/workspace/Pijus-Grincevi%C4%8Dius's-Workspace~9c563811-0a27-48f4-810b-2fc7ec316855/collection/48998640-e1724630-0cc0-465d-8ee6-9e5091bdea88?action=share&source=collection_link&creator=48998640"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Registration successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response structure correct\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.expect(jsonData.user).to.have.property('id');",
+                  "    pm.expect(jsonData.user).to.have.property('name');",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "});",
+                  "",
+                  "pm.test(\"Save credentials\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"token\", jsonData.token);",
+                  "    pm.collectionVariables.set(\"userId\", jsonData.user.id);",
+                  "    pm.collectionVariables.set(\"userEmail\", jsonData.user.email);",
+                  "    console.log(\"✅ User registered:\", jsonData.user.email);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User {{$timestamp}}\",\n  \"email\": \"test{{$timestamp}}@cirends.com\",\n  \"password\": \"Test123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Login successful\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Token received\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.token).to.be.a('string');",
+                  "    pm.expect(jsonData.token.length).to.be.above(50);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"Test123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Activities",
+      "item": [
+        {
+          "name": "Create Activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Activity created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Activity structure correct\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('name');",
+                  "    pm.expect(jsonData).to.have.property('createdBy');",
+                  "    pm.expect(jsonData).to.have.property('participants');",
+                  "    pm.expect(jsonData).to.have.property('tasks');",
+                  "    pm.collectionVariables.set(\"activityId\", jsonData.id);",
+                  "    console.log(\"✅ Activity created with ID:\", jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vasaros išvyka {{$timestamp}}\",\n  \"description\": \"Kelionė į Nidą su draugais\",\n  \"startDate\": \"2024-07-15T10:00:00Z\",\n  \"endDate\": \"2024-07-18T18:00:00Z\",\n  \"location\": \"Nida, Lietuva\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Activity by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Activity retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Activity details correct\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.equal(parseInt(pm.collectionVariables.get('activityId')));",
+                  "    pm.expect(jsonData.createdBy.id).to.equal(parseInt(pm.collectionVariables.get('userId')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Activity updated\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Atnaujinta kelionės informacija\",\n  \"location\": \"Nida + Juodkrantė\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Tasks",
+      "item": [
+        {
+          "name": "Create Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Task created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Task belongs to activity\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData.activityId).to.equal(parseInt(pm.collectionVariables.get('activityId')));",
+                  "    pm.collectionVariables.set(\"taskId\", jsonData.id);",
+                  "    console.log(\"✅ Task created with ID:\", jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rezervuoti apgyvendinimą\",\n  \"description\": \"Surasti ir rezervuoti vietą Nidoje\",\n  \"dueDate\": \"2024-07-10T12:00:00Z\",\n  \"priority\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Task by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Task retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Task hierarchy correct\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.equal(parseInt(pm.collectionVariables.get('taskId')));",
+                  "    pm.expect(jsonData.activityId).to.equal(parseInt(pm.collectionVariables.get('activityId')));",
+                  "    pm.expect(jsonData).to.have.property('expenses');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Task completed\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Expenses (Hierarchy Tests)",
+      "item": [
+        {
+          "name": "Create Simple Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Expense created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Expense hierarchy correct\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData.taskId).to.equal(parseInt(pm.collectionVariables.get('taskId')));",
+                  "    pm.expect(jsonData.paidBy.id).to.equal(parseInt(pm.collectionVariables.get('userId')));",
+                  "    pm.collectionVariables.set(\"expenseId\", jsonData.id);",
+                  "    console.log(\"✅ Expense created with ID:\", jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Apgyvendinimas\",\n  \"description\": \"Nakvynė viešbutyje\",\n  \"amount\": 250.00,\n  \"currency\": \"EUR\",\n  \"expenseDate\": \"2024-07-15T14:00:00Z\",\n  \"shares\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "{{taskId}}",
+                "expenses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expense with Shares",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Expense with shares created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Shares calculated correctly\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.expenseShares).to.be.an('array');",
+                  "    if (jsonData.expenseShares.length > 0) {",
+                  "        var totalShares = jsonData.expenseShares.reduce((sum, share) => sum + share.shareAmount, 0);",
+                  "        pm.expect(totalShares).to.equal(jsonData.amount);",
+                  "    }",
+                  "    pm.collectionVariables.set(\"sharedExpenseId\", jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maistas\",\n  \"description\": \"Pietūs restorane\",\n  \"amount\": 80.00,\n  \"currency\": \"EUR\",\n  \"expenseDate\": \"2024-07-16T12:00:00Z\",\n  \"shares\": [\n    {\n      \"userId\": {{userId}},\n      \"shareAmount\": 80.00\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "{{taskId}}",
+                "expenses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Task Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Expenses retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"All expenses belong to task\", function () {",
+                  "    var expenses = pm.response.json();",
+                  "    pm.expect(expenses).to.be.an('array');",
+                  "    expenses.forEach(function(expense) {",
+                  "        pm.expect(expense.taskId).to.equal(parseInt(pm.collectionVariables.get('taskId')));",
+                  "    });",
+                  "    console.log(\"✅ Found\", expenses.length, \"expenses for task\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "{{taskId}}",
+                "expenses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Expense updated\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 280.00,\n  \"description\": \"Kaina pakilo dėl infliacijos\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses/{{expenseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "{{taskId}}",
+                "expenses",
+                "{{expenseId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Error Cases & Security",
+      "item": [
+        {
+          "name": "Access Nonexistent Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns 404 for nonexistent task\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/99999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "99999"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expense for Nonexistent Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns 404 for nonexistent task\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invalid Expense\",\n  \"amount\": 100.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/99999/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "99999",
+                "expenses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Wrong Hierarchy Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Returns 404 for wrong activity\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/99999/tasks/{{taskId}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "99999",
+                "tasks",
+                "{{taskId}}",
+                "expenses"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Cleanup",
+      "item": [
+        {
+          "name": "Delete Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Expense deleted\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}/expenses/{{expenseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "{{taskId}}",
+                "expenses",
+                "{{expenseId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Task deleted\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Activity deleted\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activities",
+                "{{activityId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5240/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "activityId",
+      "value": ""
+    },
+    {
+      "key": "taskId",
+      "value": ""
+    },
+    {
+      "key": "expenseId",
+      "value": ""
+    },
+    {
+      "key": "sharedExpenseId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "userEmail",
+      "value": ""
+    }
+  ]
 }

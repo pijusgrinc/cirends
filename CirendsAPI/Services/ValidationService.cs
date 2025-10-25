@@ -1,10 +1,9 @@
-using CirendsAPI.Exceptions;
-
 namespace CirendsAPI.Services
 {
     public interface IValidationService
     {
         void ValidateId(int id, string parameterName = "ID");
+
         void ValidatePositiveId(int id, string parameterName = "ID");
     }
 

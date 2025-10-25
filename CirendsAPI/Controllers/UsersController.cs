@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using CirendsAPI.Data;
+using CirendsAPI.DTOs;
+using CirendsAPI.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using CirendsAPI.Data;
-using CirendsAPI.DTOs;
-using System.Security.Claims;
 using System.ComponentModel.DataAnnotations;
-using static CirendsAPI.Helpers.ValidationHelper;
-using CirendsAPI.Helpers;
 
 namespace CirendsAPI.Controllers
 {

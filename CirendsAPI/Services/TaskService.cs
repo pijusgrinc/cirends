@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using CirendsAPI.Data;
 using CirendsAPI.DTOs;
-using CirendsAPI.Models;
 using CirendsAPI.Exceptions;
+using CirendsAPI.Models;
+using Microsoft.EntityFrameworkCore;
 using UnauthorizedAccessException = CirendsAPI.Exceptions.UnauthorizedAccessException;
 
 namespace CirendsAPI.Services
@@ -10,9 +10,13 @@ namespace CirendsAPI.Services
     public interface ITaskService
     {
         Task<TaskItem?> GetTaskAsync(int activityId, int taskId, int userId);
+
         Task<IEnumerable<TaskItem>> GetTasksAsync(int activityId, int userId);
+
         Task<TaskItem> CreateTaskAsync(int activityId, int userId, CreateTaskDto createTaskDto);
+
         Task UpdateTaskAsync(int activityId, int taskId, int userId, UpdateTaskDto updateTaskDto);
+
         Task DeleteTaskAsync(int activityId, int taskId, int userId);
     }
 
@@ -28,26 +32,26 @@ namespace CirendsAPI.Services
         public async Task<TaskItem?> GetTaskAsync(int activityId, int taskId, int userId)
         {
             Console.WriteLine($"Looking for task: activityId={activityId}, taskId={taskId}, userId={userId}");
-            
+
             var activity = await _context.Activities
                 .Include(a => a.ActivityUsers)
                 .FirstOrDefaultAsync(a => a.Id == activityId);
-            
+
             if (activity == null)
             {
                 Console.WriteLine("Activity not found");
                 throw new NotFoundException("Activity not found");
             }
-            
-            var hasAccess = activity.CreatedByUserId == userId || 
+
+            var hasAccess = activity.CreatedByUserId == userId ||
                         activity.ActivityUsers.Any(au => au.UserId == userId);
-            
+
             if (!hasAccess)
             {
                 Console.WriteLine("User has no access to activity");
                 throw new UnauthorizedAccessException("No access to this activity");
             }
-            
+
             var task = await _context.Tasks
                 .Include(t => t.AssignedTo)
                 .Include(t => t.CreatedBy)
@@ -57,7 +61,7 @@ namespace CirendsAPI.Services
                 .ThenInclude(e => e.ExpenseShares)
                 .ThenInclude(es => es.User)
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
-            
+
             Console.WriteLine($"Task found: {task != null}");
             return task;
         }
@@ -65,7 +69,7 @@ namespace CirendsAPI.Services
         public async Task<IEnumerable<TaskItem>> GetTasksAsync(int activityId, int userId)
         {
             var hasAccess = await _context.Activities
-                .AnyAsync(a => a.Id == activityId && 
+                .AnyAsync(a => a.Id == activityId &&
                     (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId)));
 
             if (!hasAccess)
@@ -84,7 +88,7 @@ namespace CirendsAPI.Services
         {
             var activity = await _context.Activities
                 .Include(a => a.ActivityUsers)
-                .FirstOrDefaultAsync(a => a.Id == activityId && 
+                .FirstOrDefaultAsync(a => a.Id == activityId &&
                     (a.CreatedByUserId == userId || a.ActivityUsers.Any(au => au.UserId == userId)));
 
             if (activity == null)
@@ -130,7 +134,7 @@ namespace CirendsAPI.Services
             if (task == null)
                 throw new NotFoundException("Task not found");
 
-            var hasAccess = task.Activity.CreatedByUserId == userId || 
+            var hasAccess = task.Activity.CreatedByUserId == userId ||
                            task.Activity.ActivityUsers.Any(au => au.UserId == userId);
 
             if (!hasAccess)

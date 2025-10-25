@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using CirendsAPI.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CirendsAPI.Data
 {

@@ -15,12 +15,24 @@ namespace CirendsAPI.DTOs
 
     public class InvitationDto
     {
+        [Key]
         public int Id { get; set; }
+
+        [Required]
         public int ActivityId { get; set; }
+
+        [Required]
         public string ActivityName { get; set; } = string.Empty;
+
+        [Required]
         public UserDto? InvitedUser { get; set; }
+
+        [Required]
         public UserDto? InvitedBy { get; set; }
+
+        [Required]
         public InvitationStatus Status { get; set; }
+
         public DateTime CreatedAt { get; set; }
         public DateTime? RespondedAt { get; set; }
     }
