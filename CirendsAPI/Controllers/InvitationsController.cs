@@ -268,7 +268,59 @@ namespace CirendsAPI.Controllers
                 return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
             }
         }
+        /// <summary>
+        /// Get pending invitations for current user
+        /// </summary>
+        [HttpGet("pending")]
+        [ProducesResponseType(typeof(List<InvitationDto>), 200)]
+        [ProducesResponseType(401)]
+        public async Task<ActionResult<List<InvitationDto>>> GetPendingInvitations()
+        {
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
+            {
+                return ValidationHelper.InvalidAuthenticationResponse();
+            }
 
+            try
+            {
+                var invitations = await _context.Invitations
+                    .Where(i => i.InvitedUserId == userId && i.Status == InvitationStatus.Pending)
+                    .Include(i => i.Activity)
+                    .Include(i => i.InvitedBy)
+                    .ToListAsync();
+
+                var invitationDtos = invitations.Select(i => new InvitationDto
+                {
+                    Id = i.Id,
+                    ActivityId = i.ActivityId,
+                    ActivityName = i.Activity?.Name ?? "Unknown",
+                    InvitedUser = new UserDto
+                    {
+                        Id = i.InvitedUser!.Id,
+                        Name = i.InvitedUser.Name,
+                        Email = i.InvitedUser.Email,
+                        CreatedAt = i.InvitedUser.CreatedAt
+                    },
+                    InvitedBy = i.InvitedBy != null ? new UserDto
+                    {
+                        Id = i.InvitedBy.Id,
+                        Name = i.InvitedBy.Name,
+                        Email = i.InvitedBy.Email,
+                        CreatedAt = i.InvitedBy.CreatedAt
+                    } : null,
+                    Status = i.Status,
+                    CreatedAt = i.CreatedAt,
+                    RespondedAt = i.RespondedAt
+                }).ToList();
+
+                return Ok(invitationDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving pending invitations for user {UserId}", userId);
+                return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
+            }
+        }
         private async Task<InvitationDto> GetInvitationDto(int invitationId)
         {
             var invitation = await _context.Invitations

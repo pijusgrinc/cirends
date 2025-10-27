@@ -80,10 +80,22 @@ namespace CirendsAPI.Controllers
                 await _context.SaveChangesAsync();
 
                 var token = _tokenService.GenerateToken(user);
+                var refreshToken = _tokenService.GenerateRefreshToken();
+
+                var refreshTokenEntity = new RefreshToken
+                {
+                    Token = refreshToken,
+                    UserId = user.Id,
+                    ExpiryDate = DateTime.UtcNow.AddDays(7)
+                };
+
+                _context.RefreshTokens.Add(refreshTokenEntity);
+                await _context.SaveChangesAsync();
 
                 var response = new AuthResponseDto
                 {
                     Token = token,
+                    RefreshToken = refreshToken,
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -161,10 +173,22 @@ namespace CirendsAPI.Controllers
                 }
 
                 var token = _tokenService.GenerateToken(user);
+                var refreshToken = _tokenService.GenerateRefreshToken();
+
+                var refreshTokenEntity = new RefreshToken
+                {
+                    Token = refreshToken,
+                    UserId = user.Id,
+                    ExpiryDate = DateTime.UtcNow.AddDays(7)
+                };
+
+                _context.RefreshTokens.Add(refreshTokenEntity);
+                await _context.SaveChangesAsync();
 
                 var response = new AuthResponseDto
                 {
                     Token = token,
+                    RefreshToken = refreshToken,
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -228,6 +252,154 @@ namespace CirendsAPI.Controllers
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Refresh access token
+        /// </summary>
+        /// <response code="200">Token refreshed successfully</response>
+        /// <response code="400">Invalid or expired refresh token</response>
+        /// <response code="401">Refresh token is revoked</response>
+        [HttpPost("refresh")]
+        [ProducesResponseType(typeof(AuthResponseDto), 200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(401)]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto? request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Request body is required", error = "EMPTY_BODY" });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid input data",
+                    errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
+                });
+            }
+
+            try
+            {
+                var principal = _tokenService.GetPrincipalFromExpiredToken(request.Token);
+                if (principal == null)
+                {
+                    return BadRequest(new { message = "Invalid access token", error = "INVALID_TOKEN" });
+                }
+
+                var userIdClaim = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdClaim, out var userId))
+                {
+                    return BadRequest(new { message = "Invalid token claims", error = "INVALID_CLAIMS" });
+                }
+
+                var refreshTokenEntity = await _context.RefreshTokens
+                    .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken && rt.UserId == userId);
+
+                if (refreshTokenEntity == null)
+                {
+                    return BadRequest(new { message = "Invalid refresh token", error = "INVALID_REFRESH_TOKEN" });
+                }
+
+                if (refreshTokenEntity.IsRevoked)
+                {
+                    return Unauthorized(new { message = "Refresh token is revoked", error = "TOKEN_REVOKED" });
+                }
+
+                if (refreshTokenEntity.ExpiryDate < DateTime.UtcNow)
+                {
+                    return BadRequest(new { message = "Refresh token has expired", error = "TOKEN_EXPIRED" });
+                }
+
+                var user = await _context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null || !user.IsActive)
+                {
+                    return Unauthorized(new { message = "User not found or inactive", error = "USER_INVALID" });
+                }
+
+                var newAccessToken = _tokenService.GenerateToken(user);
+                var newRefreshToken = _tokenService.GenerateRefreshToken();
+
+                // Revoke old refresh token
+                refreshTokenEntity.IsRevoked = true;
+                _context.RefreshTokens.Update(refreshTokenEntity);
+
+                // Add new refresh token
+                var newRefreshTokenEntity = new RefreshToken
+                {
+                    Token = newRefreshToken,
+                    UserId = user.Id,
+                    ExpiryDate = DateTime.UtcNow.AddDays(7)
+                };
+
+                _context.RefreshTokens.Add(newRefreshTokenEntity);
+                await _context.SaveChangesAsync();
+
+                var response = new AuthResponseDto
+                {
+                    Token = newAccessToken,
+                    RefreshToken = newRefreshToken,
+                    User = new UserDto
+                    {
+                        Id = user.Id,
+                        Name = user.Name,
+                        Email = user.Email,
+                        Role = user.Role,
+                        CreatedAt = user.CreatedAt
+                    }
+                };
+
+                _logger.LogInformation("Token refreshed successfully for user: {UserId}", userId);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during token refresh");
+                return StatusCode(500, new { message = "Internal server error", error = "UNKNOWN_ERROR" });
+            }
+        }
+
+        /// <summary>
+        /// Logout user and revoke refresh token
+        /// </summary>
+        /// <response code="200">Logout successful</response>
+        /// <response code="400">Invalid refresh token</response>
+        [HttpPost("logout")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> Logout([FromBody] RefreshTokenRequestDto? request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Request body is required", error = "EMPTY_BODY" });
+            }
+
+            try
+            {
+                var refreshTokenEntity = await _context.RefreshTokens
+                    .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken);
+
+                if (refreshTokenEntity == null)
+                {
+                    return BadRequest(new { message = "Invalid refresh token", error = "INVALID_REFRESH_TOKEN" });
+                }
+
+                refreshTokenEntity.IsRevoked = true;
+                _context.RefreshTokens.Update(refreshTokenEntity);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("User logged out successfully. Refresh token revoked for user: {UserId}", refreshTokenEntity.UserId);
+                return Ok(new { message = "Logout successful" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during logout");
+                return StatusCode(500, new { message = "Internal server error", error = "UNKNOWN_ERROR" });
+            }
         }
     }
 }

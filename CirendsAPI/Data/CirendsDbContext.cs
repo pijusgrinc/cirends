@@ -16,6 +16,7 @@ namespace CirendsAPI.Data
         public DbSet<ActivityUser> ActivityUsers { get; set; }
         public DbSet<ExpenseShare> ExpenseShares { get; set; }
         public DbSet<Invitation> Invitations { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -148,6 +149,21 @@ namespace CirendsAPI.Data
                     .WithMany(u => u.InvitationsReceived)
                     .HasForeignKey(e => e.InvitedUserId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // RefreshToken
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Token).IsRequired();
+                entity.Property(e => e.ExpiryDate).IsRequired();
+
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.RefreshTokens)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.Token).IsUnique();
             });
         }
     }

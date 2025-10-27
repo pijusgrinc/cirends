@@ -20,6 +20,7 @@ builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IValidationService, ValidationService>();
+builder.Services.AddScoped<IActivityAccessService, ActivityAccessService>();
 
 // Add CORS
 builder.Services.AddCors(options =>

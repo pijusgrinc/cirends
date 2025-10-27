@@ -36,5 +36,6 @@ namespace CirendsAPI.Models
         public ICollection<ExpenseShare> ExpenseShares { get; set; } = new List<ExpenseShare>();
         public ICollection<Invitation> InvitationsSent { get; set; } = new List<Invitation>();
         public ICollection<Invitation> InvitationsReceived { get; set; } = new List<Invitation>();
+        public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     }
 }

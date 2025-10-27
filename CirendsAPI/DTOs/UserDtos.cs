@@ -52,6 +52,7 @@ namespace CirendsAPI.DTOs
     public class AuthResponseDto
     {
         public string Token { get; set; } = string.Empty;
+        public string? RefreshToken { get; set; }
         public UserDto User { get; set; } = null!;
     }
 
@@ -63,5 +64,14 @@ namespace CirendsAPI.DTOs
         [Required(ErrorMessage = "Naujas slaptaþodis yra bûtinas")]
         [StringLength(255, MinimumLength = 6, ErrorMessage = "Slaptaþodis turi bûti nuo 6 iki 255 simboliø")]
         public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class RefreshTokenRequestDto
+    {
+        [Required(ErrorMessage = "Þeton yra bûtinas")]
+        public string Token { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Atnaujinimo þeton yra bûtinas")]
+        public string RefreshToken { get; set; } = string.Empty;
     }
 }
