@@ -51,6 +51,7 @@ namespace CirendsAPI.Controllers
                     .Where(e => e.TaskId == taskId)
                     .Include(e => e.PaidBy)
                     .Include(e => e.ExpenseShares)
+                    .ThenInclude(es => es.User)
                     .Select(e => new ExpenseDto
                     {
                         Id = e.Id,
@@ -60,15 +61,16 @@ namespace CirendsAPI.Controllers
                         Currency = e.Currency,
                         ExpenseDate = e.ExpenseDate,
                         TaskId = e.TaskId,
+                        PaidByUserId = e.PaidByUserId,
                         CreatedAt = e.CreatedAt,
                         UpdatedAt = e.UpdatedAt,
-                        PaidBy = new UserDto
+                        PaidBy = e.PaidBy != null ? new UserDto
                         {
                             Id = e.PaidBy.Id,
                             Name = e.PaidBy.Name,
                             Email = e.PaidBy.Email,
                             CreatedAt = e.PaidBy.CreatedAt
-                        },
+                        } : null,
                         ExpenseShares = e.ExpenseShares.Select(es => new ExpenseShareDto
                         {
                             Id = es.Id,
@@ -76,7 +78,14 @@ namespace CirendsAPI.Controllers
                             ShareAmount = es.ShareAmount,
                             SharePercentage = es.SharePercentage,
                             IsPaid = es.IsPaid,
-                            PaidAt = es.PaidAt
+                            PaidAt = es.PaidAt,
+                            User = es.User != null ? new UserDto
+                            {
+                                Id = es.User.Id,
+                                Name = es.User.Name,
+                                Email = es.User.Email,
+                                CreatedAt = es.User.CreatedAt
+                            } : null
                         }).ToList()
                     })
                     .ToListAsync();
@@ -117,6 +126,7 @@ namespace CirendsAPI.Controllers
                     .AsNoTracking()
                     .Include(e => e.PaidBy)
                     .Include(e => e.ExpenseShares)
+                    .ThenInclude(es => es.User)
                     .FirstOrDefaultAsync(e => e.Id == id && e.TaskId == taskId);
 
                 if (expense == null)
@@ -135,13 +145,13 @@ namespace CirendsAPI.Controllers
                     TaskId = expense.TaskId,
                     CreatedAt = expense.CreatedAt,
                     UpdatedAt = expense.UpdatedAt,
-                    PaidBy = new UserDto
+                    PaidBy = expense.PaidBy != null ? new UserDto
                     {
                         Id = expense.PaidBy.Id,
                         Name = expense.PaidBy.Name,
                         Email = expense.PaidBy.Email,
                         CreatedAt = expense.PaidBy.CreatedAt
-                    },
+                    } : null,
                     ExpenseShares = expense.ExpenseShares.Select(es => new ExpenseShareDto
                     {
                         Id = es.Id,
@@ -149,7 +159,14 @@ namespace CirendsAPI.Controllers
                         ShareAmount = es.ShareAmount,
                         SharePercentage = es.SharePercentage,
                         IsPaid = es.IsPaid,
-                        PaidAt = es.PaidAt
+                        PaidAt = es.PaidAt,
+                        User = es.User != null ? new UserDto
+                        {
+                            Id = es.User.Id,
+                            Name = es.User.Name,
+                            Email = es.User.Email,
+                            CreatedAt = es.User.CreatedAt
+                        } : null
                     }).ToList()
                 });
             }
@@ -212,9 +229,9 @@ namespace CirendsAPI.Controllers
                     Description = createDto.Description?.Trim(),
                     Amount = createDto.Amount,
                     Currency = createDto.Currency ?? "EUR",
-                    ExpenseDate = createDto.ExpenseDate,
+                    ExpenseDate = DateTime.SpecifyKind(createDto.ExpenseDate, DateTimeKind.Utc),
                     TaskId = taskId,
-                    PaidByUserId = userId,
+                    PaidByUserId = createDto.PaidByUserId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -243,6 +260,7 @@ namespace CirendsAPI.Controllers
                 var createdExpense = await _context.Expenses
                     .Include(e => e.PaidBy)
                     .Include(e => e.ExpenseShares)
+                    .ThenInclude(es => es.User)
                     .FirstOrDefaultAsync(e => e.Id == expense.Id);
 
                 return CreatedAtAction(nameof(GetExpense),
@@ -290,6 +308,7 @@ namespace CirendsAPI.Controllers
             try
             {
                 var expense = await _context.Expenses
+                    .Include(e => e.ExpenseShares)
                     .FirstOrDefaultAsync(e => e.Id == id && e.TaskId == taskId);
 
                 if (expense == null)
@@ -312,7 +331,30 @@ namespace CirendsAPI.Controllers
                     expense.Amount = updateDto.Amount.Value;
 
                 if (updateDto.ExpenseDate.HasValue)
-                    expense.ExpenseDate = updateDto.ExpenseDate.Value;
+                    expense.ExpenseDate = DateTime.SpecifyKind(updateDto.ExpenseDate.Value, DateTimeKind.Utc);
+
+                if (updateDto.PaidByUserId.HasValue)
+                    expense.PaidByUserId = updateDto.PaidByUserId.Value;
+
+                // Update expense shares if provided
+                if (updateDto.Shares != null)
+                {
+                    // Remove existing shares
+                    _context.ExpenseShares.RemoveRange(expense.ExpenseShares);
+                    
+                    // Add new shares
+                    var newShares = updateDto.Shares.Select(s => new ExpenseShare
+                    {
+                        ExpenseId = expense.Id,
+                        UserId = s.UserId,
+                        ShareAmount = s.ShareAmount,
+                        SharePercentage = s.SharePercentage ?? 0,
+                        IsPaid = false,
+                        CreatedAt = DateTime.UtcNow
+                    }).ToList();
+                    
+                    _context.ExpenseShares.AddRange(newShares);
+                }
 
                 expense.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
@@ -390,15 +432,16 @@ namespace CirendsAPI.Controllers
                 Currency = expense.Currency,
                 ExpenseDate = expense.ExpenseDate,
                 TaskId = expense.TaskId,
+                PaidByUserId = expense.PaidByUserId,
                 CreatedAt = expense.CreatedAt,
                 UpdatedAt = expense.UpdatedAt,
-                PaidBy = new UserDto
+                PaidBy = expense.PaidBy != null ? new UserDto
                 {
                     Id = expense.PaidBy.Id,
                     Name = expense.PaidBy.Name,
                     Email = expense.PaidBy.Email,
                     CreatedAt = expense.PaidBy.CreatedAt
-                },
+                } : null,
                 ExpenseShares = expense.ExpenseShares?.Select(es => new ExpenseShareDto
                 {
                     Id = es.Id,
@@ -406,7 +449,14 @@ namespace CirendsAPI.Controllers
                     ShareAmount = es.ShareAmount,
                     SharePercentage = es.SharePercentage,
                     IsPaid = es.IsPaid,
-                    PaidAt = es.PaidAt
+                    PaidAt = es.PaidAt,
+                    User = es.User != null ? new UserDto
+                    {
+                        Id = es.User.Id,
+                        Name = es.User.Name,
+                        Email = es.User.Email,
+                        CreatedAt = es.User.CreatedAt
+                    } : null
                 }).ToList() ?? new List<ExpenseShareDto>()
             };
         }
@@ -431,6 +481,10 @@ namespace CirendsAPI.Controllers
         [Required(ErrorMessage = "Expense date is required")]
         public DateTime ExpenseDate { get; set; }
 
+        [Required(ErrorMessage = "PaidByUserId is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "PaidByUserId must be a valid user ID")]
+        public int PaidByUserId { get; set; }
+
         public List<ExpenseShareRequest> Shares { get; set; } = new();
     }
 
@@ -446,6 +500,11 @@ namespace CirendsAPI.Controllers
         public decimal? Amount { get; set; }
 
         public DateTime? ExpenseDate { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "PaidByUserId must be a valid user ID")]
+        public int? PaidByUserId { get; set; }
+
+        public List<ExpenseShareRequest>? Shares { get; set; }
     }
 
     public class ExpenseShareRequest

@@ -198,7 +198,7 @@ namespace CirendsAPI.Controllers
                 {
                     Name = createDto.Name.Trim(),
                     Description = createDto.Description?.Trim(),
-                    DueDate = createDto.DueDate,
+                    DueDate = DateTime.SpecifyKind(createDto.DueDate, DateTimeKind.Utc),
                     Priority = (TaskItemPriority)createDto.Priority,
                     Status = TaskItemStatus.Pending,
                     ActivityId = activityId,
@@ -258,7 +258,7 @@ namespace CirendsAPI.Controllers
                 if (!string.IsNullOrWhiteSpace(updateDto.Description))
                     task.Description = updateDto.Description.Trim();
                 if (updateDto.DueDate.HasValue)
-                    task.DueDate = updateDto.DueDate.Value;
+                    task.DueDate = DateTime.SpecifyKind(updateDto.DueDate.Value, DateTimeKind.Utc);
                 if (updateDto.Priority.HasValue)
                     task.Priority = (TaskItemPriority)updateDto.Priority.Value;
                 if (updateDto.Status.HasValue)

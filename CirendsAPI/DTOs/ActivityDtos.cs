@@ -56,7 +56,7 @@ namespace CirendsAPI.DTOs
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public UserDto CreatedBy { get; set; } = null!;
+        public UserDto? CreatedBy { get; set; }
         public List<TaskItemDto> Tasks { get; set; } = new();
         public List<ActivityUserDto> Participants { get; set; } = new(); // Changed from List<UserDto> to List<ActivityUserDto>
     }
@@ -72,6 +72,6 @@ namespace CirendsAPI.DTOs
         public bool IsAdmin { get; set; }
 
         public DateTime JoinedAt { get; set; }
-        public UserDto User { get; set; } = null!;
+        public UserDto? User { get; set; }
     }
 }
