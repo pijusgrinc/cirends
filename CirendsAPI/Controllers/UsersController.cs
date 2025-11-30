@@ -1,6 +1,7 @@
 ﻿using CirendsAPI.Data;
 using CirendsAPI.DTOs;
 using CirendsAPI.Helpers;
+using CirendsAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,19 +30,21 @@ namespace CirendsAPI.Controllers
         /// <response code="403">Forbidden - Admin role required</response>
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(List<UserDto>), 200)]
+        [ProducesResponseType(typeof(List<AdminUserDto>), 200)]
         [ProducesResponseType(401)]
         [ProducesResponseType(403)]
-        public async Task<ActionResult<List<UserDto>>> GetAllUsers()
+        public async Task<ActionResult<List<AdminUserDto>>> GetAllUsers()
         {
             try
             {
                 var users = await _context.Users
-                    .Select(u => new UserDto
+                    .Select(u => new AdminUserDto
                     {
                         Id = u.Id,
                         Name = u.Name,
                         Email = u.Email,
+                        Role = u.Role,
+                        IsActive = u.IsActive,
                         CreatedAt = u.CreatedAt
                     })
                     .ToListAsync();
@@ -266,12 +269,166 @@ namespace CirendsAPI.Controllers
                     Id = user.Id,
                     Name = user.Name,
                     Email = user.Email,
-                    CreatedAt = user.CreatedAt
+                    Role = user.Role,
+                    IsActive = user.IsActive,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving current user profile");
+                return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
+            }
+        }
+
+        /// <summary>
+        /// Update user role (Admin only)
+        /// </summary>
+        [HttpPut("{id}/role")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> UpdateUserRole(int id, [FromBody] UpdateRoleRequest request)
+        {
+            var validation = ValidationHelper.ValidatePositiveId(id, "userId");
+            if (validation != null) return validation;
+
+            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request.Role))
+            {
+                return BadRequest(new { message = "Invalid role", error = "INVALID_ROLE" });
+            }
+
+            var normalizedRole = request.Role.Trim();
+            if (normalizedRole != "Admin" && normalizedRole != "User")
+            {
+                return BadRequest(new { message = "Role must be 'Admin' or 'User'", error = "INVALID_ROLE" });
+            }
+
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User not found", error = "USER_NOT_FOUND" });
+                }
+
+                user.Role = normalizedRole;
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user role {UserId}", id);
+                return StatusCode(500, new { message = "Failed to update role", error = "DATABASE_ERROR" });
+            }
+        }
+
+        /// <summary>
+        /// Toggle user active status (Admin only)
+        /// </summary>
+        [HttpPut("{id}/toggle-active")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> ToggleUserActive(int id)
+        {
+            var validation = ValidationHelper.ValidatePositiveId(id, "userId");
+            if (validation != null) return validation;
+
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User not found", error = "USER_NOT_FOUND" });
+                }
+
+                user.IsActive = !user.IsActive;
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling user active status {UserId}", id);
+                return StatusCode(500, new { message = "Failed to toggle active status", error = "DATABASE_ERROR" });
+            }
+        }
+
+        /// <summary>
+        /// Get system statistics (Admin only)
+        /// </summary>
+        [HttpGet("statistics")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(SystemStatistics), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        public async Task<ActionResult<SystemStatistics>> GetStatistics()
+        {
+            try
+            {
+                var stats = new SystemStatistics
+                {
+                    TotalUsers = await _context.Users.CountAsync(),
+                    ActiveUsers = await _context.Users.CountAsync(u => u.IsActive),
+                    TotalActivities = await _context.Activities.CountAsync(),
+                    TotalTasks = await _context.Tasks.CountAsync(),
+                    CompletedTasks = await _context.Tasks.CountAsync(t => t.Status == TaskItemStatus.Completed),
+                    TotalExpenses = await _context.Expenses.CountAsync(),
+                    TotalExpenseAmount = await _context.Expenses.SumAsync(e => (decimal?)e.Amount) ?? 0
+                };
+
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving statistics");
+                return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
+            }
+        }
+
+        /// <summary>
+        /// Get all activities with basic info (Admin only)
+        /// </summary>
+        [HttpGet("activities")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(List<ActivityDto>), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        public async Task<ActionResult<List<ActivityDto>>> GetAllActivities()
+        {
+            try
+            {
+                var activities = await _context.Activities
+                    .Where(a => a.CreatedBy != null)
+                    .Include(a => a.CreatedBy)
+                    .Select(a => new ActivityDto
+                    {
+                        Id = a.Id,
+                        Name = a.Name,
+                        Description = a.Description,
+                        StartDate = a.StartDate,
+                        EndDate = a.EndDate,
+                        Location = a.Location,
+                        CreatedAt = a.CreatedAt,
+                        UpdatedAt = a.UpdatedAt,
+                        CreatedBy = new UserDto
+                        {
+                            Id = a.CreatedBy!.Id,
+                            Name = a.CreatedBy.Name,
+                            Email = a.CreatedBy.Email,
+                            CreatedAt = a.CreatedBy.CreatedAt
+                        }
+                    })
+                    .ToListAsync();
+
+                return Ok(activities);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all activities");
                 return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
             }
         }
@@ -285,5 +442,32 @@ namespace CirendsAPI.Controllers
         [EmailAddress(ErrorMessage = "Invalid email format")]
         [StringLength(100, ErrorMessage = "Email must not exceed 100 characters")]
         public string? Email { get; set; }
+    }
+
+    public class UpdateRoleRequest
+    {
+        [Required(ErrorMessage = "Role is required")]
+        public string Role { get; set; } = string.Empty;
+    }
+
+    public class SystemStatistics
+    {
+        public int TotalUsers { get; set; }
+        public int ActiveUsers { get; set; }
+        public int TotalActivities { get; set; }
+        public int TotalTasks { get; set; }
+        public int CompletedTasks { get; set; }
+        public int TotalExpenses { get; set; }
+        public decimal TotalExpenseAmount { get; set; }
+    }
+
+    public class AdminUserDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }

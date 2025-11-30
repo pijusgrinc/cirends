@@ -31,15 +31,12 @@ namespace CirendsAPI.Services
 
         public async Task<TaskItem?> GetTaskAsync(int activityId, int taskId, int userId)
         {
-            Console.WriteLine($"Looking for task: activityId={activityId}, taskId={taskId}, userId={userId}");
-
             var activity = await _context.Activities
                 .Include(a => a.ActivityUsers)
                 .FirstOrDefaultAsync(a => a.Id == activityId);
 
             if (activity == null)
             {
-                Console.WriteLine("Activity not found");
                 throw new NotFoundException("Activity not found");
             }
 
@@ -48,7 +45,6 @@ namespace CirendsAPI.Services
 
             if (!hasAccess)
             {
-                Console.WriteLine("User has no access to activity");
                 throw new UnauthorizedAccessException("No access to this activity");
             }
 
@@ -62,7 +58,6 @@ namespace CirendsAPI.Services
                 .ThenInclude(es => es.User)
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
 
-            Console.WriteLine($"Task found: {task != null}");
             return task;
         }
 

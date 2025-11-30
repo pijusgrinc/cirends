@@ -1,4 +1,4 @@
-@CirendsAPI_HostAddress = http://localhost:5069
+@CirendsAPI_HostAddress = http://cirends.runasp.net/
 
 GET {{CirendsAPI_HostAddress}}/weatherforecast/
 Accept: application/json

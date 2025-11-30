@@ -18,6 +18,9 @@ namespace CirendsAPI.DTOs
         public string Currency { get; set; } = "EUR";
         
         public DateTime ExpenseDate { get; set; } = DateTime.UtcNow;
+        [Required]
+        [Range(1, int.MaxValue)]
+        public int PaidByUserId { get; set; }
         
         public List<ExpenseShareRequest> Shares { get; set; } = new();
     }
@@ -37,6 +40,9 @@ namespace CirendsAPI.DTOs
         public string? Currency { get; set; }
         
         public DateTime? ExpenseDate { get; set; }
+        [Range(1, int.MaxValue)]
+        public int? PaidByUserId { get; set; }
+        public List<ExpenseShareRequest>? Shares { get; set; }
     }
 
     public class ExpenseDto
@@ -58,6 +64,8 @@ namespace CirendsAPI.DTOs
         public DateTime UpdatedAt { get; set; }
         [Required]
         public int TaskId { get; set; }
+        [Required]
+        public int PaidByUserId { get; set; }
         public UserDto? PaidBy { get; set; }
         public List<ExpenseShareDto> ExpenseShares { get; set; } = new();
     }
@@ -97,5 +105,7 @@ namespace CirendsAPI.DTOs
         [Required]
         [Range(0.01, double.MaxValue)]
         public decimal ShareAmount { get; set; }
+        [Range(0, 100)]
+        public decimal? SharePercentage { get; set; }
     }
 }
