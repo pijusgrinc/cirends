@@ -49,8 +49,8 @@ Sistema suteiks galimybę vartotojams bendrauti, dalintis informacija ir užtikr
 11. Keisti užduoties būseną (planuojama → vykdoma → atlikta).  
 12. Peržiūrėti veiklai priskirtų užduočių sąrašą.  
 13. Pridėti išlaidas prie veiklos ar užduoties (pvz., „Benzinas – 50 €“).  
-14. Nurodyti, kas sumokėjo už išlaidą.  
-15. Paskirstyti išlaidą tarp dalyvių (lygiai arba procentiškai).  
+14. Nurodyti, kas sumokėjo už išlaidas.  
+15. Paskirstyti išlaidas tarp dalyvių (lygiai arba procentiškai).  
 16. Peržiūrėti bendrą išlaidų suvestinę veikloje.  
 17. Matyti individualią savo skolą ar permoką.  
 
@@ -65,6 +65,35 @@ Sistema suteiks galimybę vartotojams bendrauti, dalintis informacija ir užtikr
 
 - **Kliento pusė (Front-End):** HTML, CSS, Vue.js  
 - **Serverio pusė (Back-End):** C# su .NET  
-- **Duomenų bazė:** PostgreSQL
-- **Debesų technologijos:** MonsterAPI (talpinimui)  
+- **Duomenų bazė:** NeonDB (PostgreSQL)
+- **Debesų technologijos:** MonsterAPI (backend talpinimui), Netlify (frontend talpinimui) 
 
+### 4. Pagrindiniai endpoint'ai:
+
+#### Autentifikacija:
+- `POST /api/auth/register` - Registracija
+- `POST /api/auth/login` - Prisijungimas
+- `POST /api/auth/logout` - Atsijungimas
+
+#### Veiklos:
+- `GET /api/activities` - Gauti visas vartotojo veiklas
+- `POST /api/activities` - Sukurti naują veiklą
+- `GET /api/activities/{id}` - Gauti konkrečios veiklos detales
+- `PUT /api/activities/{id}` - Atnaujinti veiklą
+- `DELETE /api/activities/{id}` - Ištrinti veiklą
+
+#### Užduotys:
+- `GET /api/activities/{activityId}/tasks` - Gauti veiklos užduotis
+- `POST /api/activities/{activityId}/tasks` - Sukurti naują užduotį
+- `PUT /api/tasks/{id}` - Atnaujinti užduotį
+- `DELETE /api/tasks/{id}` - Ištrinti užduotį
+
+#### Išlaidos:
+- `GET /api/activities/{activityId}/expenses` - Gauti veiklos išlaidas
+- `POST /api/activities/{activityId}/expenses` - Sukurti naują išlaidą
+- `PUT /api/expenses/{id}` - Atnaujinti išlaidą
+- `DELETE /api/expenses/{id}` - Ištrinti išlaidą
+
+
+### 5. Išvados
+Projekto „Cirends“ tikslas – sukurti patogią ir funkcionalią planavimo sistemą, kuri padėtų draugų ar bendraminčių grupėms efektyviai organizuoti bendras veiklas. Sistema leis vartotojams lengvai kurti veiklas, priskirti užduotis ir valdyti išlaidas, taip palengvinant bendravimą ir atsakomybės pasidalijimą. Naudojant modernias technologijas, tokias kaip Vue.js, .NET ir PostgreSQL, bus užtikrintas sklandus sistemos veikimas ir patikimumas. Projekto sėkmė priklausys nuo vartotojų poreikių supratimo ir nuolatinio sistemos tobulinimo.
