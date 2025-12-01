@@ -22,12 +22,17 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IValidationService, ValidationService>();
 builder.Services.AddScoped<IActivityAccessService, ActivityAccessService>();
 
+var allowedOrigins = new[] {
+    "https://cirends.netlify.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+};
 // Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVueApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
