@@ -1,0 +1,539 @@
+openapi: 3.0.1
+info:
+  title: CirendsAPI
+  version: "1.0"
+servers:
+  - url: https://cirends.runasp.net/api
+  - url: http://localhost:5000/api
+tags:
+  - name: Auth
+  - name: Activities
+  - name: Tasks
+  - name: Expenses
+  - name: ExpenseShares
+  - name: Invitations
+  - name: Users
+security:
+  - Bearer: []
+components:
+  securitySchemes:
+    Bearer:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+  schemas:
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string, nullable: true }
+        title: { type: string, nullable: true }
+        status: { type: integer, format: int32, nullable: true }
+        detail: { type: string, nullable: true }
+        instance: { type: string, nullable: true }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string }
+        createdAt: { type: string, format: date-time }
+    Activity:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        startDate: { type: string, format: date-time }
+        endDate: { type: string, format: date-time, nullable: true }
+        location: { type: string, nullable: true }
+        createdByUserId: { type: integer }
+        createdAt: { type: string, format: date-time }
+    Task:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: integer }
+        priority: { type: integer }
+        dueDate: { type: string, format: date-time, nullable: true }
+        activityId: { type: integer }
+        createdAt: { type: string, format: date-time }
+    ExpenseShare:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        shareAmount: { type: number, format: double }
+        sharePercentage: { type: number, format: double, nullable: true }
+        isPaid: { type: boolean }
+        paidAt: { type: string, format: date-time, nullable: true }
+    Expense:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        amount: { type: number, format: double }
+        currency: { type: string }
+        expenseDate: { type: string, format: date-time }
+        taskId: { type: integer }
+        paidByUserId: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        paidBy: { $ref: "#/components/schemas/User" }
+        shares:
+          type: array
+          items: { $ref: "#/components/schemas/ExpenseShare" }
+    Invitation:
+      type: object
+      properties:
+        id: { type: integer }
+        activityId: { type: integer }
+        activityName: { type: string }
+        status: { type: integer }
+        createdAt: { type: string, format: date-time }
+        respondedAt: { type: string, format: date-time, nullable: true }
+        invitedUser: { $ref: "#/components/schemas/User" }
+        invitedBy: { $ref: "#/components/schemas/User" }
+
+paths:
+  /Auth/register:
+    post:
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example: { email: "user@example.com", password: "secret123", name: "Vartotojas" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              example: { token: "jwt...", refreshToken: "rt...", user: { id: 1, name: "Vartotojas", email: "user@example.com" } }
+        "400":
+          description: Bad Request
+          content: { application/json: { schema: { $ref: "#/components/schemas/ProblemDetails" } } }
+
+  /Auth/login:
+    post:
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example: { email: "user@example.com", password: "secret123" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { token: "jwt...", refreshToken: "rt...", user: { id: 1, name: "Vartotojas", email: "user@example.com" } }
+        "400": { description: Bad Request }
+        "401": { description: Unauthorized }
+
+  /Auth/logout:
+    post:
+      tags: [Auth]
+      responses:
+        "200": { description: OK }
+        "400": { description: Bad Request }
+
+  /Activities:
+    get:
+      tags: [Activities]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example:
+                - { id: 1, name: "Kelionė", description: "Aprašymas", startDate: "2025-01-10T00:00:00Z", endDate: "2025-01-12T00:00:00Z" }
+        "401": { description: Unauthorized }
+    post:
+      tags: [Activities]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example: { name: "Kelionė", description: "Aprašymas", startDate: "2025-01-10T00:00:00Z", endDate: "2025-01-12T00:00:00Z", location: "Druskininkai" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              example: { id: 1, name: "Kelionė", startDate: "2025-01-10T00:00:00Z" }
+        "400": { description: Bad Request }
+        "401": { description: Unauthorized }
+
+  /Activities/{id}:
+    get:
+      tags: [Activities]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { id: 1, name: "Kelionė", participants: [], tasks: [] }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+        "401": { description: Unauthorized }
+    put:
+      tags: [Activities]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            example: { name: "Kelionė (atnaujinta)" }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden }
+    delete:
+      tags: [Activities]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden }
+
+  /Activities/{id}/participants:
+    get:
+      tags: [Activities]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: [ { id: 2, name: "Jonas", email: "jonas@example.com" } ]
+    post:
+      tags: [Activities]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            example: { userId: 2 }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "403": { description: Forbidden }
+        "404": { description: Not Found }
+
+  /Activities/{id}/participants/{userId}:
+    delete:
+      tags: [Activities]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: userId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "403": { description: Forbidden }
+        "404": { description: Not Found }
+        "401": { description: Unauthorized }
+
+  /activities/{activityId}/tasks:
+    get:
+      tags: [Tasks]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example:
+                - { id: 11, name: "Nupirkti maisto", status: 0, priority: 1, activityId: 1 }
+        "404": { description: Not Found }
+    post:
+      tags: [Tasks]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            example: { name: "Nupirkti maisto", description: "…", dueDate: "2025-01-10T12:00:00Z", priority: 1 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              example: { id: 11, name: "Nupirkti maisto", status: 0, priority: 1, activityId: 1 }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+
+  /activities/{activityId}/tasks/{id}:
+    get:
+      tags: [Tasks]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { id: 11, name: "Nupirkti maisto", status: 1, activityId: 1 }
+        "404": { description: Not Found }
+    put:
+      tags: [Tasks]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            example: { status: 2, name: "Nupirkti maisto" }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+    delete:
+      tags: [Tasks]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+
+  /activities/{activityId}/tasks/{taskId}/expenses:
+    get:
+      tags: [Expenses]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: taskId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example:
+                - { id: 21, name: "Maistas", amount: 60.0, currency: "EUR", taskId: 11, paidByUserId: 1 }
+        "404": { description: Not Found }
+    post:
+      tags: [Expenses]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: taskId, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            example:
+              name: "Maistas"
+              description: "…"
+              amount: 60.00
+              currency: "EUR"
+              expenseDate: "2025-01-10T13:00:00Z"
+              paidByUserId: 1
+              shares:
+                - { userId: 2, shareAmount: 30.00 }
+                - { userId: 3, shareAmount: 30.00 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              example: { id: 21, name: "Maistas", amount: 60.0, currency: "EUR" }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+
+  /activities/{activityId}/tasks/{taskId}/expenses/{id}:
+    get:
+      tags: [Expenses]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: taskId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { id: 21, name: "Maistas", amount: 60.0, currency: "EUR" }
+        "404": { description: Not Found }
+    put:
+      tags: [Expenses]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: taskId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            example: { name: "Maistas (atnaujinta)", amount: 62.0 }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+    delete:
+      tags: [Expenses]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: taskId, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "404": { description: Not Found }
+
+  /activities/{activityId}/tasks/{taskId}/expenses/{expenseId}/shares/{shareId}/mark-paid:
+    patch:
+      tags: [ExpenseShares]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: taskId, in: path, required: true, schema: { type: integer } }
+        - { name: expenseId, in: path, required: true, schema: { type: integer } }
+        - { name: shareId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "403": { description: Forbidden }
+        "404": { description: Not Found }
+
+  /activities/{activityId}/tasks/{taskId}/expenses/{expenseId}/shares/{shareId}/unmark-paid:
+    patch:
+      tags: [ExpenseShares]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: taskId, in: path, required: true, schema: { type: integer } }
+        - { name: expenseId, in: path, required: true, schema: { type: integer } }
+        - { name: shareId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "403": { description: Forbidden }
+        "404": { description: Not Found }
+
+  /activities/{activityId}/tasks/{taskId}/expenses/mark-all-paid:
+    post:
+      tags: [ExpenseShares]
+      parameters:
+        - { name: activityId, in: path, required: true, schema: { type: integer } }
+        - { name: taskId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "403": { description: Forbidden }
+        "404": { description: Not Found }
+
+  /Invitations:
+    get:
+      tags: [Invitations]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example:
+                - { id: 5, activityId: 1, activityName: "Kelionė", status: 0, createdAt: "2025-01-09T10:00:00Z" }
+        "401": { description: Unauthorized }
+    post:
+      tags: [Invitations]
+      requestBody:
+        content:
+          application/json:
+            example: { email: "friend@example.com", activityId: 1 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              example: { id: 5, activityId: 1, activityName: "Kelionė", status: 0 }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+
+  /Invitations/pending:
+    get:
+      tags: [Invitations]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example:
+                - { id: 5, activityId: 1, activityName: "Kelionė", status: 0 }
+        "401": { description: Unauthorized }
+
+  /Invitations/{id}/accept:
+    post:
+      tags: [Invitations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+
+  /Invitations/{id}/reject:
+    post:
+      tags: [Invitations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: No Content }
+        "400": { description: Bad Request }
+        "404": { description: Not Found }
+
+  /Invitations/{id}:
+    get:
+      tags: [Invitations]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { id: 5, activityId: 1, activityName: "Kelionė", status: 0 }
+        "404": { description: Not Found }
+
+  /Users/profile:
+    get:
+      tags: [Users]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { id: 1, name: "Vartotojas", email: "user@example.com", role: "Member" }
+        "401": { description: Unauthorized }
+
+  /Users/statistics:
+    get:
+      tags: [Users]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example: { totalUsers: 10, activeUsers: 9, totalActivities: 4, totalTasks: 12, completedTasks: 3, totalExpenses: 25, totalExpenseAmount: 1234.56 }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden }
+
+  /Users/activities:
+    get:
+      tags: [Users]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              example:
+                - { id: 1, name: "Kelionė", startDate: "2025-01-10T00:00:00Z" }
+        "401": { description: Unauthorized }
+        "403": { description: Forbidden }

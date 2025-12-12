@@ -63,12 +63,31 @@ Sistema suteiks galimybę vartotojams bendrauti, dalintis informacija ir užtikr
 
 ## 2. Sistemos architektūra
 
+### Deployment diagrama
+
+![Deployment Diagram](docs/deployment_diagram.jpg)
+
+Frontend talpinamas Netlify, backend – MonsterAPI, DB – NeonDB (PostgreSQL).
+
 - **Kliento pusė (Front-End):** HTML, CSS, Vue.js  
 - **Serverio pusė (Back-End):** C# su .NET  
 - **Duomenų bazė:** NeonDB (PostgreSQL)
 - **Debesų technologijos:** MonsterAPI (backend talpinimui), Netlify (frontend talpinimui) 
 
+
+## 3. Naudotojo sąsajos projektas
+
+### Main page
+
+![Main Page](docs/MainPage.png)
+
+### Activity detail page
+
+![Activity Detail Page](docs/ActivityDetails.png)
+
 ### 4. Pagrindiniai endpoint'ai:
+
+[API specifikaciją (api-spec.yaml)](api-spec.yaml)
 
 #### Autentifikacija:
 - `POST /api/auth/register` - Registracija
@@ -96,4 +115,4 @@ Sistema suteiks galimybę vartotojams bendrauti, dalintis informacija ir užtikr
 
 
 ### 5. Išvados
-Projekto „Cirends“ tikslas – sukurti patogią ir funkcionalią planavimo sistemą, kuri padėtų draugų ar bendraminčių grupėms efektyviai organizuoti bendras veiklas. Sistema leis vartotojams lengvai kurti veiklas, priskirti užduotis ir valdyti išlaidas, taip palengvinant bendravimą ir atsakomybės pasidalijimą. Naudojant modernias technologijas, tokias kaip Vue.js, .NET ir PostgreSQL, bus užtikrintas sklandus sistemos veikimas ir patikimumas. Projekto sėkmė priklausys nuo vartotojų poreikių supratimo ir nuolatinio sistemos tobulinimo.
+Projekto „Cirends“ tikslas buvo sukurti patogią ir funkcionalią planavimo sistemą, kuri padėtų draugų ar bendraminčių grupėms efektyviai organizuoti bendras veiklas. Tikslą pavyko įgyvendinti ir sistema leidžia vartotojams lengvai kurti veiklas, priskirti užduotis bei valdyti išlaidas, taip palengvinant bendravimą ir atsakomybės pasidalijimą. Modernias technologijų naudojimas, tokias kaip Vue.js, .NET ir NeonDB (PostgreSQL), užtikrina sklandų sistemos veikimą. Puslapis veikia ir yra patalpintas internete, todėl vartotojai gali lengvai pasiekti ir naudotis sistema jau dabar.
