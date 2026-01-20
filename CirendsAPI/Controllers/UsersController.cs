@@ -293,6 +293,84 @@ namespace CirendsAPI.Controllers
         }
 
         /// <summary>
+        /// Change user password
+        /// </summary>
+        /// <param name="id">User ID (must be positive)</param>
+        /// <param name="changePasswordDto">Password change data</param>
+        /// <response code="200">Password changed successfully</response>
+        /// <response code="400">Invalid input data or current password incorrect</response>
+        /// <response code="401">Unauthorized access</response>
+        /// <response code="403">Can only change own password</response>
+        /// <response code="404">User not found</response>
+        [HttpPut("{id}/password")]
+        [Authorize]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto? changePasswordDto)
+        {
+            var validation = ValidationHelper.ValidatePositiveId(id, "userId");
+            if (validation != null) return validation;
+
+            if (changePasswordDto == null)
+            {
+                return BadRequest(new { message = "Request body is required", error = "EMPTY_BODY" });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Invalid input data", errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)) });
+            }
+
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var currentUserId))
+            {
+                return ValidationHelper.InvalidAuthenticationResponse();
+            }
+
+            // Users can only change their own password
+            if (currentUserId != id)
+            {
+                return Forbid();
+            }
+
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User not found", error = "USER_NOT_FOUND" });
+                }
+
+                // Verify current password using the same method as AuthController
+                if (!PasswordHelper.VerifyPassword(changePasswordDto.CurrentPassword, user.PasswordHash))
+                {
+                    return BadRequest(new { message = "Current password is incorrect", error = "INVALID_PASSWORD" });
+                }
+
+                // Hash new password using the same method as AuthController
+                user.PasswordHash = PasswordHelper.HashPassword(changePasswordDto.NewPassword);
+                user.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Password changed successfully for user: {UserId}", id);
+                return Ok(new { message = "Password changed successfully" });
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Database error changing password for user {UserId}", id);
+                return StatusCode(500, new { message = "Failed to change password", error = "DATABASE_ERROR" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error changing password for user {UserId}", id);
+                return StatusCode(500, new { message = "Internal server error", error = "UNKNOWN_ERROR" });
+            }
+        }
+
+        /// <summary>
         /// Update user role (Admin only)
         /// </summary>
         [HttpPut("{id}/role")]
