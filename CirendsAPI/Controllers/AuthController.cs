@@ -2,9 +2,10 @@ using CirendsAPI.Data;
 using CirendsAPI.DTOs;
 using CirendsAPI.Models;
 using CirendsAPI.Services;
+using CirendsAPI.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
+using Microsoft.AspNetCore.Http;
 
 namespace CirendsAPI.Controllers
 {
@@ -12,6 +13,9 @@ namespace CirendsAPI.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+        private const string AccessTokenCookieName = "access_token";
+        private const string RefreshTokenCookieName = "refresh_token";
+
         private readonly CirendsDbContext _context;
         private readonly ITokenService _tokenService;
         private readonly ILogger<AuthController> _logger;
@@ -21,6 +25,42 @@ namespace CirendsAPI.Controllers
             _context = context;
             _tokenService = tokenService;
             _logger = logger;
+        }
+
+        private CookieOptions BuildCookieOptions(TimeSpan lifetime, bool httpOnly = true)
+        {
+            // On HTTP (local dev) SameSite=None cookies would be dropped because they require Secure.
+            // Relax to Lax when not using HTTPS so the cookie is accepted locally.
+            var isHttps = HttpContext.Request.IsHttps;
+            var sameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax;
+
+            return new CookieOptions
+            {
+                HttpOnly = httpOnly,
+                Secure = isHttps,
+                SameSite = sameSite,
+                Expires = DateTimeOffset.UtcNow.Add(lifetime),
+                Path = "/"
+            };
+        }
+
+        private void SetAuthCookies(string accessToken, string refreshToken)
+        {
+            Response.Cookies.Append(
+                AccessTokenCookieName,
+                accessToken,
+                BuildCookieOptions(TimeSpan.FromMinutes(60)));
+
+            Response.Cookies.Append(
+                RefreshTokenCookieName,
+                refreshToken,
+                BuildCookieOptions(TimeSpan.FromDays(7)));
+        }
+
+        private void ClearAuthCookies()
+        {
+            Response.Cookies.Delete(AccessTokenCookieName, new CookieOptions { Path = "/" });
+            Response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions { Path = "/" });
         }
 
         /// <summary>
@@ -63,7 +103,7 @@ namespace CirendsAPI.Controllers
                     });
                 }
 
-                var hashedPassword = HashPassword(registerDto.Password);
+                var hashedPassword = PasswordHelper.HashPassword(registerDto.Password);
 
                 var user = new User
                 {
@@ -92,10 +132,11 @@ namespace CirendsAPI.Controllers
                 _context.RefreshTokens.Add(refreshTokenEntity);
                 await _context.SaveChangesAsync();
 
+                SetAuthCookies(token, refreshToken);
+
                 var response = new AuthResponseDto
                 {
                     Token = token,
-                    RefreshToken = refreshToken,
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -153,7 +194,7 @@ namespace CirendsAPI.Controllers
                     .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == loginDto.Email.ToLower());
 
-                if (user == null || !VerifyPassword(loginDto.Password, user.PasswordHash))
+                if (user == null || !PasswordHelper.VerifyPassword(loginDto.Password, user.PasswordHash))
                 {
                     _logger.LogWarning("Failed login attempt for email: {Email}", loginDto.Email);
                     return BadRequest(new
@@ -185,10 +226,11 @@ namespace CirendsAPI.Controllers
                 _context.RefreshTokens.Add(refreshTokenEntity);
                 await _context.SaveChangesAsync();
 
+                SetAuthCookies(token, refreshToken);
+
                 var response = new AuthResponseDto
                 {
                     Token = token,
-                    RefreshToken = refreshToken,
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -210,51 +252,6 @@ namespace CirendsAPI.Controllers
         }
 
         /// <summary>
-        /// Hash password using PBKDF2 with SHA256
-        /// </summary>
-        private static string HashPassword(string password)
-        {
-            using (var sha256 = SHA256.Create())
-            {
-                var saltBytes = new byte[16];
-                using (var rng = RandomNumberGenerator.Create())
-                {
-                    rng.GetBytes(saltBytes);
-                }
-
-                var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 100000, HashAlgorithmName.SHA256);
-                var hashBytes = pbkdf2.GetBytes(20);
-
-                var hashWithSalt = new byte[36];
-                Array.Copy(saltBytes, 0, hashWithSalt, 0, 16);
-                Array.Copy(hashBytes, 0, hashWithSalt, 16, 20);
-
-                return Convert.ToBase64String(hashWithSalt);
-            }
-        }
-
-        /// <summary>
-        /// Verify password
-        /// </summary>
-        private static bool VerifyPassword(string password, string hash)
-        {
-            var hashBytes = Convert.FromBase64String(hash);
-            var saltBytes = new byte[16];
-            Array.Copy(hashBytes, 0, saltBytes, 0, 16);
-
-            var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 100000, HashAlgorithmName.SHA256);
-            var hashBytes2 = pbkdf2.GetBytes(20);
-
-            for (int i = 0; i < 20; i++)
-            {
-                if (hashBytes[i + 16] != hashBytes2[i])
-                    return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// Refresh access token
         /// </summary>
         /// <response code="200">Token refreshed successfully</response>
@@ -266,12 +263,15 @@ namespace CirendsAPI.Controllers
         [ProducesResponseType(401)]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto? request)
         {
-            if (request == null)
+            var refreshToken = Request.Cookies[RefreshTokenCookieName] ?? request?.RefreshToken;
+            var accessToken = request?.Token ?? Request.Cookies[AccessTokenCookieName];
+
+            if (string.IsNullOrWhiteSpace(refreshToken) || string.IsNullOrWhiteSpace(accessToken))
             {
-                return BadRequest(new { message = "Request body is required", error = "EMPTY_BODY" });
+                return BadRequest(new { message = "Refresh token or access token is missing", error = "MISSING_TOKEN" });
             }
 
-            if (!ModelState.IsValid)
+            if (request != null && !ModelState.IsValid)
             {
                 return BadRequest(new
                 {
@@ -282,7 +282,7 @@ namespace CirendsAPI.Controllers
 
             try
             {
-                var principal = _tokenService.GetPrincipalFromExpiredToken(request.Token);
+                var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
                 if (principal == null)
                 {
                     return BadRequest(new { message = "Invalid access token", error = "INVALID_TOKEN" });
@@ -295,7 +295,7 @@ namespace CirendsAPI.Controllers
                 }
 
                 var refreshTokenEntity = await _context.RefreshTokens
-                    .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken && rt.UserId == userId);
+                    .FirstOrDefaultAsync(rt => rt.Token == refreshToken && rt.UserId == userId);
 
                 if (refreshTokenEntity == null)
                 {
@@ -339,10 +339,11 @@ namespace CirendsAPI.Controllers
                 _context.RefreshTokens.Add(newRefreshTokenEntity);
                 await _context.SaveChangesAsync();
 
+                SetAuthCookies(newAccessToken, newRefreshToken);
+
                 var response = new AuthResponseDto
                 {
                     Token = newAccessToken,
-                    RefreshToken = newRefreshToken,
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -373,15 +374,16 @@ namespace CirendsAPI.Controllers
         [ProducesResponseType(400)]
         public async Task<IActionResult> Logout([FromBody] RefreshTokenRequestDto? request)
         {
-            if (request == null)
-            {
-                return BadRequest(new { message = "Request body is required", error = "EMPTY_BODY" });
-            }
-
             try
             {
+                var refreshToken = Request.Cookies[RefreshTokenCookieName] ?? request?.RefreshToken;
+                if (string.IsNullOrWhiteSpace(refreshToken))
+                {
+                    return BadRequest(new { message = "Refresh token is missing", error = "MISSING_REFRESH_TOKEN" });
+                }
+
                 var refreshTokenEntity = await _context.RefreshTokens
-                    .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken);
+                    .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
 
                 if (refreshTokenEntity == null)
                 {
@@ -391,6 +393,8 @@ namespace CirendsAPI.Controllers
                 refreshTokenEntity.IsRevoked = true;
                 _context.RefreshTokens.Update(refreshTokenEntity);
                 await _context.SaveChangesAsync();
+
+                ClearAuthCookies();
 
                 _logger.LogInformation("User logged out successfully. Refresh token revoked for user: {UserId}", refreshTokenEntity.UserId);
                 return Ok(new { message = "Logout successful" });

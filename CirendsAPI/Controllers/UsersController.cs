@@ -108,14 +108,14 @@ namespace CirendsAPI.Controllers
         /// </summary>
         /// <param name="id">User ID (must be positive)</param>
         /// <param name="updateDto">User update data</param>
-        /// <response code="204">User updated successfully</response>
+        /// <response code="200">User updated successfully, returns updated user</response>
         /// <response code="400">Invalid input data or ID</response>
         /// <response code="404">User not found</response>
         /// <response code="401">Unauthorized access</response>
         /// <response code="403">Can only update own profile or not admin</response>
         [HttpPut("{id}")]
         [Authorize]
-        [ProducesResponseType(204)]
+        [ProducesResponseType(typeof(UserDto), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         [ProducesResponseType(401)]
@@ -175,7 +175,17 @@ namespace CirendsAPI.Controllers
                 }
 
                 await _context.SaveChangesAsync();
-                return NoContent();
+                
+                return Ok(new UserDto
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    Role = user.Role,
+                    IsActive = user.IsActive,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt
+                });
             }
             catch (DbUpdateException ex)
             {

@@ -4,17 +4,17 @@ namespace CirendsAPI.DTOs
 {
     public class RegisterDto
     {
-        [Required(ErrorMessage = "Vardas yra bûtinas")]
-        [StringLength(100, MinimumLength = 2, ErrorMessage = "Vardas turi bûti nuo 2 iki 100 simboliø")]
+        [Required(ErrorMessage = "Vardas yra bï¿½tinas")]
+        [StringLength(100, MinimumLength = 2, ErrorMessage = "Vardas turi bï¿½ti nuo 2 iki 100 simboliï¿½")]
         public string Name { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "El. paðto adresas yra bûtinas")]
-        [EmailAddress(ErrorMessage = "Neteisingas el. paðto formatas")]
-        [StringLength(255, ErrorMessage = "El. paðto adresas negali virðyti 255 simboliø")]
+        [Required(ErrorMessage = "El. paï¿½to adresas yra bï¿½tinas")]
+        [EmailAddress(ErrorMessage = "Neteisingas el. paï¿½to formatas")]
+        [StringLength(255, ErrorMessage = "El. paï¿½to adresas negali virï¿½yti 255 simboliï¿½")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Slaptaþodis yra bûtinas")]
-        [StringLength(255, MinimumLength = 6, ErrorMessage = "Slaptaþodis turi bûti nuo 6 iki 255 simboliø")]
+        [Required(ErrorMessage = "Slaptaï¿½odis yra bï¿½tinas")]
+        [StringLength(255, MinimumLength = 6, ErrorMessage = "Slaptaï¿½odis turi bï¿½ti nuo 6 iki 255 simboliï¿½")]
         public string Password { get; set; } = string.Empty;
 
         public string? Role { get; internal set; }
@@ -22,11 +22,11 @@ namespace CirendsAPI.DTOs
 
     public class LoginDto
     {
-        [Required(ErrorMessage = "El. paðto adresas yra bûtinas")]
-        [EmailAddress(ErrorMessage = "Neteisingas el. paðto formatas")]
+        [Required(ErrorMessage = "El. paï¿½to adresas yra bï¿½tinas")]
+        [EmailAddress(ErrorMessage = "Neteisingas el. paï¿½to formatas")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Slaptaþodis yra bûtinas")]
+        [Required(ErrorMessage = "Slaptaï¿½odis yra bï¿½tinas")]
         public string Password { get; set; } = string.Empty;
     }
 
@@ -52,26 +52,24 @@ namespace CirendsAPI.DTOs
     public class AuthResponseDto
     {
         public string Token { get; set; } = string.Empty;
-        public string? RefreshToken { get; set; }
         public UserDto User { get; set; } = null!;
     }
 
     public class ChangePasswordDto
     {
-        [Required(ErrorMessage = "Dabartinis slaptaþodis yra bûtinas")]
+        [Required(ErrorMessage = "Dabartinis slaptaï¿½odis yra bï¿½tinas")]
         public string CurrentPassword { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Naujas slaptaþodis yra bûtinas")]
-        [StringLength(255, MinimumLength = 6, ErrorMessage = "Slaptaþodis turi bûti nuo 6 iki 255 simboliø")]
+        [Required(ErrorMessage = "Naujas slaptaï¿½odis yra bï¿½tinas")]
+        [StringLength(255, MinimumLength = 6, ErrorMessage = "Slaptaï¿½odis turi bï¿½ti nuo 6 iki 255 simboliï¿½")]
         public string NewPassword { get; set; } = string.Empty;
     }
 
     public class RefreshTokenRequestDto
     {
-        [Required(ErrorMessage = "Þeton yra bûtinas")]
+        [Required(ErrorMessage = "Å½etonas yra bÅ«tinas")]
         public string Token { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Atnaujinimo þeton yra bûtinas")]
-        public string RefreshToken { get; set; } = string.Empty;
+        public string? RefreshToken { get; set; }
     }
 }

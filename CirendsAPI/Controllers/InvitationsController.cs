@@ -65,7 +65,7 @@ namespace CirendsAPI.Controllers
                     return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
                 }
 
-                // Patikrinti, ar vartotojas yra veiklos kūrėjas, narys arba administratorius
+                // Patikrinti, ar naudotojas yra veiklos kūrėjas, narys arba administratorius
                 var isCreator = activity.CreatedByUserId == userId;
                 var isActivityMember = activity.ActivityUsers.Any(au => au.UserId == userId);
                 var isAdmin = User.IsInRole("Admin");
@@ -75,7 +75,7 @@ namespace CirendsAPI.Controllers
                     return Forbid();
                 }
 
-                // Rasti kvieciamą vartotoją
+                // Rasti kvieciamą naudotoją
                 var invitedUser = await _context.Users
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == dto.Email.ToLower());
 
@@ -84,19 +84,19 @@ namespace CirendsAPI.Controllers
                     return BadRequest(new { message = "User with this email not found", error = "USER_NOT_FOUND" });
                 }
 
-                // Patikrinti, ar vartotojas bando pakviesti save
+                // Patikrinti, ar naudotojas bando pakviesti save
                 if (invitedUser.Id == userId)
                 {
                     return BadRequest(new { message = "You cannot invite yourself", error = "CANNOT_INVITE_SELF" });
                 }
 
-                // Patikrinti, ar vartotojas jau yra veiklos kūrėjas
+                // Patikrinti, ar naudotojas jau yra veiklos kūrėjas
                 if (invitedUser.Id == activity.CreatedByUserId)
                 {
                     return BadRequest(new { message = "User is the creator of this activity", error = "USER_IS_CREATOR" });
                 }
 
-                // Patikrinti, ar vartotojas jau yra veiklos narys
+                // Patikrinti, ar naudotojas jau yra veiklos narys
                 if (activity.ActivityUsers.Any(au => au.UserId == invitedUser.Id))
                 {
                     return BadRequest(new { message = "User is already a member of this activity", error = "ALREADY_MEMBER" });
@@ -252,7 +252,7 @@ namespace CirendsAPI.Controllers
 
                 if (dto.Accept)
                 {
-                    // Pridėti vartotoją prie veiklos
+                    // Pridėti naudotoją prie veiklos
                     var activityUser = new ActivityUser
                     {
                         ActivityId = invitation.ActivityId,
