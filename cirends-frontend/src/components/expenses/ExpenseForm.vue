@@ -250,23 +250,33 @@ function onSubmit() {
 </script>
 
 <style scoped>
-.form { display: flex; flex-direction: column; gap: 1rem; }
-.form-row { display: flex; flex-direction: column; gap: 0.5rem; }
-label { font-weight: 600; color: var(--text-secondary); }
-input, textarea, select { padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--border-radius-sm); }
-.shares { display: flex; flex-direction: column; gap: 0.5rem; }
-.shares-actions { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
-.share-row { display: flex; gap: 0.5rem; align-items: center; }
-.actions { display: flex; gap: 0.75rem; }
+.shares {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shares-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.share-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
 
 .distribution-summary {
   display: flex;
   gap: 1rem;
   padding: 0.75rem;
-  background: #f9fafb;
+  background: var(--gray-50);
   border-radius: 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .distribution-summary .remaining {
@@ -274,10 +284,10 @@ input, textarea, select { padding: 0.5rem 0.75rem; border: 1px solid var(--borde
 }
 
 .distribution-summary .fully-distributed {
-  color: #10b981;
+  color: var(--success);
 }
 
 .distribution-summary .has-remaining {
-  color: #f59e0b;
+  color: var(--warning);
 }
 </style>

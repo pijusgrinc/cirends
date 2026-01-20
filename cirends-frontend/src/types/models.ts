@@ -1,7 +1,7 @@
 import type { Role, TaskStatus, InvitationStatus } from './enums'
 
 /**
- * Vartotojas
+ * Naudotojas
  */
 export interface User {
   id: number

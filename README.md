@@ -5,7 +5,7 @@
 **Projekto tikslas** – sukurti planavimo sistemą, kuri palengvintų draugų ar bendraminčių grupių bendrų veiklų organizavimą, suteikiant galimybę patogiai planuoti veiklas, paskirstyti užduotis ir sekti finansus.
 
 **Veikimo principas** – sistema sudaryta iš dviejų dalių:
-- **Internetinė aplikacija**, kuria naudosis paprasti vartotojai ir administratorius;
+- **Internetinė aplikacija**, kuria naudosis paprasti naudotojai ir administratorius;
 - **API sąsaja**, užtikrinanti veiklų, užduočių ir išlaidų valdymą bei duomenų mainus tarp kliento ir serverio.
 
 Naudotojas, prisijungęs prie aplikacijos, galės:
@@ -19,12 +19,12 @@ Sistema leis paskirstyti atsakomybę, matyti, kas ką padarė, ir kaip pasidalin
 
 ## 1.1 Sistemos paskirtis
 
-Sistemos paskirtis – palengvinti vartotojų bendravimą ir organizavimą, leidžiant jiems efektyviai:
+Sistemos paskirtis – palengvinti naudotojų bendravimą ir organizavimą, leidžiant jiems efektyviai:
 - planuoti veiklas,  
 - dalintis atsakomybėmis,  
 - valdyti išlaidas.  
 
-Sistema suteiks galimybę vartotojams bendrauti, dalintis informacija ir užtikrinti, kad visi dalyviai būtų informuoti apie planuojamas veiklas.
+Sistema suteiks galimybę naudotojams bendrauti, dalintis informacija ir užtikrinti, kad visi dalyviai būtų informuoti apie planuojamas veiklas.
 
 ---
 
@@ -95,7 +95,7 @@ Frontend talpinamas Netlify, backend – MonsterAPI, DB – NeonDB (PostgreSQL).
 - `POST /api/auth/logout` - Atsijungimas
 
 #### Veiklos:
-- `GET /api/activities` - Gauti visas vartotojo veiklas
+- `GET /api/activities` - Gauti visas naudotojo veiklas
 - `POST /api/activities` - Sukurti naują veiklą
 - `GET /api/activities/{id}` - Gauti konkrečios veiklos detales
 - `PUT /api/activities/{id}` - Atnaujinti veiklą
@@ -115,4 +115,4 @@ Frontend talpinamas Netlify, backend – MonsterAPI, DB – NeonDB (PostgreSQL).
 
 
 ### 5. Išvados
-Projekto „Cirends“ tikslą - sukurti patogią ir funkcionalią planavimo sistemą, kuri padėtų draugų ar bendraminčių grupėms efektyviai organizuoti bendras veiklas, iš dalies pavyko pavyko įgyvendinti ir sistema leidžia vartotojams lengvai kurti veiklas, priskirti užduotis bei valdyti išlaidas, taip palengvinant bendravimą ir atsakomybės pasidalijimą. Modernių technologijų naudojimas, tokias kaip Vue.js, .NET ir NeonDB (PostgreSQL), užtikrina sklandų sistemos veikimą. Puslapis veikia ir yra patalpintas internete, todėl vartotojai gali lengvai pasiekti ir naudotis sistema jau dabar.
+Projekto „Cirends“ tikslą - sukurti patogią ir funkcionalią planavimo sistemą, kuri padėtų draugų ar bendraminčių grupėms efektyviai organizuoti bendras veiklas, iš dalies pavyko pavyko įgyvendinti ir sistema leidžia naudotojams lengvai kurti veiklas, priskirti užduotis bei valdyti išlaidas, taip palengvinant bendravimą ir atsakomybės pasidalijimą. Modernių technologijų naudojimas, tokias kaip Vue.js, .NET ir NeonDB (PostgreSQL), užtikrina sklandų sistemos veikimą. Puslapis veikia ir yra patalpintas internete, todėl naudotojai gali lengvai pasiekti ir naudotis sistema jau dabar.

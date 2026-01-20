@@ -81,38 +81,6 @@ export function validateNumberRange(
 }
 
 /**
- * Tikrina ar data yra ateityje
- */
-export function validateFutureDate(date: string | Date | null | undefined): boolean {
-  if (!date) return false
-  
-  try {
-    const d = new Date(date)
-    if (isNaN(d.getTime())) return false
-    
-    return d > new Date()
-  } catch {
-    return false
-  }
-}
-
-/**
- * Tikrina ar data yra praeityje
- */
-export function validatePastDate(date: string | Date | null | undefined): boolean {
-  if (!date) return false
-  
-  try {
-    const d = new Date(date)
-    if (isNaN(d.getTime())) return false
-    
-    return d < new Date()
-  } catch {
-    return false
-  }
-}
-
-/**
  * Tikrina ar pabaigos data yra po pradžios datos
  */
 export function validateDateRange(startDate: string | Date, endDate: string | Date): boolean {

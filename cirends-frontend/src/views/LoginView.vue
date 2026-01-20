@@ -130,33 +130,8 @@ const handleLogin = async () => {
   margin-bottom: 1.5rem;
 }
 
-.form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: var(--dark);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.form-label.required::after {
-  content: ' *';
-  color: var(--danger);
-}
-
-.form-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--gray-400);
-  border-radius: 6px;
-  font-size: 0.95rem;
-  transition: var(--transition);
-  font-family: 'Poppins', sans-serif;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+.form-group {
+  margin-bottom: 1.5rem;
 }
 
 .form-input:disabled {

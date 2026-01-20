@@ -3,20 +3,15 @@
  * This file provides TypeScript types for the JavaScript API module
  */
 
-import type { ApiResponse, LoginResponse, RefreshTokenResponse } from './types'
+import type { ApiResponse, LoginResponse } from './types'
 import type { User, Activity, Task, Expense, Invitation } from './types'
-
-// Token management
-export function getToken(): string | null
-export function setToken(token: string): void
-export function removeToken(): void
 
 // Auth API
 export const authAPI: {
   register(email: string, password: string, name: string): Promise<ApiResponse<LoginResponse>>
   login(email: string, password: string): Promise<ApiResponse<LoginResponse>>
   logout(): Promise<ApiResponse<void>>
-  refresh(): Promise<ApiResponse<RefreshTokenResponse>>
+  refresh(): Promise<ApiResponse<LoginResponse>>
 }
 
 // Users API
@@ -24,7 +19,7 @@ export const usersAPI: {
   getProfile(): Promise<ApiResponse<User>>
   getAllUsers(): Promise<ApiResponse<User[]>>
   getUserById(id: number): Promise<ApiResponse<User>>
-  updateProfile(data: any): Promise<ApiResponse<User>>
+  updateUser(id: number, data: any): Promise<ApiResponse<User>>
   deleteUser(id: number): Promise<ApiResponse<void>>
 }
 

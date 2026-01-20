@@ -1,7 +1,7 @@
 <template>
   <header class="app-header">
     <div class="header-content">
-      <router-link to="/dashboard" class="logo">
+      <router-link :to="logoLink" class="logo">
         <Icon name="check-circle" size="32" class="logo-icon" />
         <span class="logo-text">Cirends</span>
       </router-link>
@@ -38,7 +38,8 @@ const authStore = useAuthStore()
 const router = useRouter()
 
 const isLoggedIn = computed(() => authStore.isAuthenticated)
-const userName = computed(() => authStore.user?.name || 'Vartotojas')
+const logoLink = computed(() => isLoggedIn.value ? '/dashboard' : '/')
+const userName = computed(() => authStore.user?.name || 'Naudotojas')
 const userEmail = computed(() => authStore.user?.email || '')
 
 const userInitials = computed(() => {

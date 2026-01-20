@@ -86,9 +86,16 @@ function onSubmit() {
 </script>
 
 <style scoped>
-.form { display: flex; flex-direction: column; gap: 1rem; }
-.form-row { display: flex; flex-direction: column; gap: 0.5rem; }
-label { font-weight: 600; color: var(--text-secondary); }
-input, textarea, select { padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--border-radius-sm); }
-.actions { display: flex; gap: 0.75rem; }
+/* Override for specific task form rows */
+.form-row:nth-child(4) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .form-row:nth-child(4) {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

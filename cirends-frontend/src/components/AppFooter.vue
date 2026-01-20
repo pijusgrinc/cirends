@@ -15,8 +15,7 @@
           <li><a href="https://github.com/pijusgrinc/cirends">GitHub</a></li>
         </ul>
       </div>
-
-      <div class="footer-section">
+      <div v-if="isAuthenticated" class="footer-section">
         <h4>Greitos nuorodos</h4>
         <ul class="footer-links">
           <li><router-link to="/dashboard">Pagrindinis</router-link></li>
@@ -29,18 +28,16 @@
 
     <div class="footer-bottom">
       <p>&copy; {{ new Date().getFullYear() }} Cirends. Visos teisės saugomos.</p>
-      <p>
-        Sukurta su
-        <svg class="heart-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-        </svg>
-        Vue.js ir .NET
-      </p>
     </div>
   </footer>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useAuthStore } from '@/stores'
+
+const authStore = useAuthStore()
+const isAuthenticated = computed(() => authStore.isAuthenticated)
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 /**
- * Vartotojo rolės sistemoje
+ * Naudotojo rolės sistemoje
  */
 export enum Role {
   Guest = 0,

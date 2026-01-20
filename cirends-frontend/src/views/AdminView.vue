@@ -22,15 +22,15 @@
       <div v-if="activeTab === 'users'" class="tab-content">
         <Card>
           <div class="section-header">
-            <h2>Vartotojų valdymas</h2>
+            <h2>Naudotojų valdymas</h2>
             <Button variant="primary" size="sm" @click="$router.push('/admin/users')">
-              Valdyti vartotojus
+              Valdyti naudotojus
             </Button>
           </div>
           
           <div class="stats-row">
             <div class="stat-item">
-              <div class="stat-label">Viso vartotojų</div>
+              <div class="stat-label">Viso naudotojų</div>
               <div class="stat-value">{{ userStats.total }}</div>
             </div>
             <div class="stat-item">
@@ -67,18 +67,7 @@
             </div>
           </div>
 
-          <div class="danger-zone">
-            <h3>Pavojinga zona</h3>
-            <p>Šie veiksmai gali pakeisti sistemos duomenis. Būkite atsargūs.</p>
-            <div class="danger-actions">
-              <Button variant="danger" size="sm" disabled>
-                Išvalyti cache
-              </Button>
-              <Button variant="danger" size="sm" disabled>
-                Eksportuoti duomenis
-              </Button>
-            </div>
-          </div>
+          <!-- Future admin features can be added here -->
         </Card>
       </div>
     </div>
@@ -104,7 +93,7 @@ const { error } = useToast()
 const activeTab = ref<'users' | 'activities' | 'system'>('users')
 
 const tabs = [
-  { key: 'users' as const, label: 'Vartotojai' },
+  { key: 'users' as const, label: 'Naudotojai' },
   { key: 'system' as const, label: 'Sistema' }
 ]
 
@@ -183,7 +172,7 @@ function viewActivity(id: number) {
   padding: 0.375rem 0.75rem;
   background: var(--danger-light);
   color: var(--danger);
-  border-radius: var(--border-radius-sm);
+  border-radius: 0.375rem;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;

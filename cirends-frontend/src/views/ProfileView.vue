@@ -32,6 +32,9 @@
             <Button variant="primary" @click="showEditModal = true">
               Redaguoti profilį
             </Button>
+            <Button variant="secondary" @click="showPasswordModal = true">
+              Keisti slaptažodį
+            </Button>
           </div>
         </Card>
       </div>
@@ -78,6 +81,14 @@
           </form>
         </Card>
       </div>
+
+      <!-- Change Password Modal -->
+      <ChangePasswordModal 
+        :is-open="showPasswordModal"
+        :user-id="profileData.id"
+        @close="showPasswordModal = false"
+        @success="handlePasswordChanged"
+      />
     </div>
   </div>
 </template>
@@ -88,6 +99,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores'
 import { usersAPI } from '@/api'
 import { Button, Card, Input } from '@/components/common'
+import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
 import { useToast } from '@/composables'
 import { Role, getRoleLabel } from '@/types/enums'
 import type { User } from '@/types'
@@ -99,6 +111,7 @@ const { success, error } = useToast()
 const loading = ref(true)
 const saving = ref(false)
 const showEditModal = ref(false)
+const showPasswordModal = ref(false)
 
 const profileData = ref<User>({
   id: 0,
@@ -139,7 +152,7 @@ async function loadProfile() {
 async function handleUpdate() {
   saving.value = true
   try {
-    const response = await usersAPI.updateProfile(editForm.value)
+    const response = await usersAPI.updateUser(profileData.value.id, editForm.value)
     if (response.ok && response.data) {
       profileData.value = response.data
       // Update auth store
@@ -155,6 +168,10 @@ async function handleUpdate() {
   } finally {
     saving.value = false
   }
+}
+
+function handlePasswordChanged() {
+  success('Slaptažodis sėkmingai pakeistas')
 }
 
 function formatDate(dateStr: string) {
@@ -254,20 +271,16 @@ function getRoleText(role: Role | string) {
   margin-bottom: 0;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: var(--text-primary);
+.edit-form {
+  padding: 1.5rem;
 }
 
-.form-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  transition: var(--transition);
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group:last-of-type {
+  margin-bottom: 0;
 }
 
 .form-input:focus {

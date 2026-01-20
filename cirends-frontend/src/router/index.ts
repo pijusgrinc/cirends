@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '../api.js'
 import { useAuthStore } from '@/stores'
 
 // Views
@@ -25,7 +24,8 @@ const router = createRouter({
       component: LandingView,
       meta: { requiresGuest: true },
       beforeEnter: (to, from, next) => {
-        if (getToken()) {
+        const authStore = useAuthStore()
+        if (authStore.isAuthenticated) {
           next('/dashboard')
         } else {
           next()
@@ -102,7 +102,16 @@ const router = createRouter({
 
 // Navigation guard
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!getToken()
+  const authStore = useAuthStore()
+  
+  // Wait for hydration before applying guards
+  if (!authStore.hydrated) {
+    // Still hydrating; allow navigation but it will likely redirect
+    next()
+    return
+  }
+  
+  const isAuthenticated = authStore.isAuthenticated
 
   if (to.meta.requiresAuth && !isAuthenticated) {
     next('/login')
@@ -110,7 +119,6 @@ router.beforeEach((to, from, next) => {
     next('/dashboard')
   } else if (to.meta.requiresAdmin) {
     // Check if user is admin
-    const authStore = useAuthStore()
     if (!authStore.isAdmin) {
       next('/dashboard')
     } else {

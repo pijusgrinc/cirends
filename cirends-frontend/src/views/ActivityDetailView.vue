@@ -935,7 +935,7 @@ async function removeParticipant(userId: number) {
 
 .role-badge {
   padding: 0.25rem 0.75rem;
-  border-radius: var(--border-radius-sm);
+  border-radius: 0.375rem;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;

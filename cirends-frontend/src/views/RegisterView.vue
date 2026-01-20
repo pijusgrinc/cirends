@@ -42,7 +42,7 @@
             required
             :disabled="authStore.loading"
           />
-          <p class="form-hint">Mažiausiai 6 ženklai</p>
+          <p class="form-hint">*Mažiausiai 6 ženklai</p>
         </div>
 
         <div class="form-group">
@@ -185,27 +185,19 @@ const handleRegister = async () => {
   margin-bottom: 1.5rem;
 }
 
-.form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: var(--dark);
-  font-weight: 600;
-  font-size: 0.9rem;
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
-.form-label.required::after {
-  content: ' *';
-  color: var(--danger);
+.form-group {
+  margin-bottom: 1.5rem;
 }
 
-.form-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--gray-400);
-  border-radius: 6px;
-  font-size: 0.95rem;
-  transition: var(--transition);
-  font-family: 'Poppins', sans-serif;
+.form-input:disabled {
+  background: var(--gray-100);
+  cursor: not-allowed;
 }
 
 .form-input:focus {

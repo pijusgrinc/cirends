@@ -44,7 +44,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { invitationsAPI, getToken } from '../api.js'
+import { invitationsAPI } from '../api.js'
 import { useAuthStore } from '@/stores/auth'
 import { Icon } from '@/components/icons'
 
@@ -53,7 +53,7 @@ const mobileMenuOpen = ref(false)
 const pendingInvitations = ref(0)
 
 onMounted(async () => {
-  if (getToken()) {
+  if (authStore.isAuthenticated) {
     try {
       const result = await invitationsAPI.getPending()
       if (result.ok) {

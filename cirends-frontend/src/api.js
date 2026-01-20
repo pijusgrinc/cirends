@@ -1,37 +1,22 @@
 // API konfiguracija
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://cirends.runasp.net/api'
 
-// Token valdymas
-export const getToken = () => localStorage.getItem('token')
-export const setToken = (token) => localStorage.setItem('token', token)
-export const removeToken = () => localStorage.removeItem('token')
-
-// Headers su autentifikacija
-const getHeaders = (isJson = true) => {
-  const headers = {}
-  const token = getToken()
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  
-  if (isJson) {
+// Header helper
+const getHeaders = (isJson = true, customHeaders = {}) => {
+  const headers = { ...customHeaders }
+  if (isJson && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json'
   }
-  
   return headers
 }
 
 async function apiCall(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`
-  const headers = getHeaders(options.method !== 'GET' && !options.formData)
+  const headers = getHeaders(options.method !== 'GET' && !options.formData, options.headers)
   
   const config = {
     method: options.method || 'GET',
-    headers: {
-      ...headers,
-      ...options.headers
-    },
+    headers,
     credentials: 'include' // CORS credentials
   }
   
@@ -45,11 +30,6 @@ async function apiCall(endpoint, options = {}) {
   try {
     const response = await fetch(url, config)
     
-    if (response.status === 401) {
-      removeToken()
-      window.location.href = '/login'
-    }
-    
     let data = null
     const contentType = response.headers.get('content-type')
     
@@ -57,6 +37,24 @@ async function apiCall(endpoint, options = {}) {
       data = await response.json()
     } else {
       data = await response.text()
+    }
+    
+    // Handle 401 Unauthorized - session expired or token invalid
+    if (response.status === 401) {
+      console.warn('Unauthorized (401) - session expired or token invalid')
+      // Auto-logout on 401
+      try {
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        if (authStore.isAuthenticated) {
+          await authStore.logout()
+          // Redirect to login
+          const router = (await import('@/router')).default
+          router.push('/login')
+        }
+      } catch (err) {
+        console.error('Failed to handle 401:', err)
+      }
     }
     
     return {
@@ -99,10 +97,14 @@ export const authAPI = {
   
   async logout() {
     return apiCall('/auth/logout', { method: 'POST' })
+  },
+  
+  async refresh() {
+    return apiCall('/auth/refresh', { method: 'POST' })
   }
 }
 
-// ============== VARTOTOJAI ==============
+// ============== Naudotojai ==============
 
 export const usersAPI = {
   async getProfile() {
@@ -117,10 +119,17 @@ export const usersAPI = {
     return apiCall(`/users/${id}`)
   },
   
-  async updateProfile(data) {
-    return apiCall('/users/profile', {
+  async updateUser(id, data) {
+    return apiCall(`/users/${id}`, {
       method: 'PUT',
       body: data
+    })
+  },
+
+  async changePassword(id, currentPassword, newPassword) {
+    return apiCall(`/users/${id}/password`, {
+      method: 'PUT',
+      body: { currentPassword, newPassword }
     })
   },
   

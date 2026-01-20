@@ -155,7 +155,7 @@ async function loadMyExpenses() {
   try {
     const currentUserId = authStore.user?.id
     if (!currentUserId) {
-      error('Nėra prisijungusio vartotojo')
+      error('Nėra prisijungusio naudotojo')
       return
     }
 
@@ -332,7 +332,7 @@ h1 {
 
 .status-badge {
   padding: 0.25rem 0.75rem;
-  border-radius: var(--border-radius-sm);
+  border-radius: 0.375rem;
   font-size: 0.875rem;
   font-weight: 600;
   white-space: nowrap;

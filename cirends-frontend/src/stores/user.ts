@@ -5,7 +5,7 @@ import type { User, UpdateUserRequest } from '@/types'
 import { Role } from '@/types/enums'
 
 /**
- * Vartotojo profilio store
+ * naudotojo profilio store
  */
 export const useUserStore = defineStore('user', () => {
   // State
@@ -52,12 +52,12 @@ export const useUserStore = defineStore('user', () => {
         }))
         return users.value
       } else {
-        error.value = response.error?.message || 'Nepavyko gauti vartotojų'
+        error.value = response.error?.message || 'Nepavyko gauti naudotojų'
         users.value = []
         return []
       }
     } catch (e) {
-      error.value = 'Netikėta klaida gaunant vartotojus'
+      error.value = 'Netikėta klaida gaunant naudotojus'
       console.error('Fetch users error:', e)
       users.value = []
       return []
@@ -84,11 +84,11 @@ export const useUserStore = defineStore('user', () => {
         }
         return currentUser.value
       } else {
-        error.value = response.error?.message || 'Vartotojas nerastas'
+        error.value = response.error?.message || 'naudotojas nerastas'
         return null
       }
     } catch (e) {
-      error.value = 'Netikėta klaida gaunant vartotoją'
+      error.value = 'Netikėta klaida gaunant naudotoją'
       console.error('Fetch user error:', e)
       return null
     } finally {
@@ -138,16 +138,23 @@ export const useUserStore = defineStore('user', () => {
         users.value = users.value.filter(u => u.id !== userId)
         return true
       } else {
-        error.value = response.error?.message || 'Nepavyko ištrinti vartotojo'
+        error.value = response.error?.message || 'Nepavyko ištrinti naudotojo'
         return false
       }
     } catch (e) {
-      error.value = 'Netikėta klaida trinant vartotoją'
+      error.value = 'Netikėta klaida trinant naudotoją'
       console.error('Delete user error:', e)
       return false
     } finally {
       loading.value = false
     }
+  }
+
+  function reset() {
+    users.value = []
+    currentUser.value = null
+    loading.value = false
+    error.value = null
   }
 
   function clearError() {
@@ -170,6 +177,7 @@ export const useUserStore = defineStore('user', () => {
     fetchUser,
     updateProfile,
     deleteUser,
-    clearError
+    clearError,
+    reset
   }
 })

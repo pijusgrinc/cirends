@@ -33,13 +33,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string
-  refreshToken: string
   user: User
-}
-
-export interface RefreshTokenResponse {
-  token: string
-  refreshToken: string
 }
 
 // ============== ACTIVITIES ==============
@@ -124,7 +118,6 @@ export interface RespondToInvitationRequest {
 export interface UpdateUserRequest {
   name?: string
   email?: string
-  password?: string
 }
 
 // ============== PAGINATION ==============

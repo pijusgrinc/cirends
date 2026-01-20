@@ -3,8 +3,8 @@
     <div class="container">
       <div class="page-header">
         <div>
-          <h1>Vartotojų valdymas</h1>
-          <p class="subtitle">Valdykite sistemos vartotojus ir jų teises</p>
+          <h1>Naudotojų valdymas</h1>
+          <p class="subtitle">Valdykite sistemos naudotojus ir jų teises</p>
         </div>
         <router-link to="/admin" class="back-button">
           <Icon name="arrow-back" :size="20" />
@@ -88,7 +88,7 @@
 
       <div v-else class="empty-state">
         <Icon name="users" :size="48" />
-        <p>Vartotojų nerasta</p>
+        <p>Naudotojų nerasta</p>
       </div>
     </div>
   </div>
@@ -135,7 +135,7 @@ async function toggleActive(u: any) {
 }
 
 async function remove(u: any) {
-  if (!confirm(`Ar tikrai šalinti vartotoją ${u.name}?`)) return
+  if (!confirm(`Ar tikrai šalinti naudotoją ${u.name}?`)) return
   saving.value = true
   await admin.deleteUser(u.id)
   saving.value = false

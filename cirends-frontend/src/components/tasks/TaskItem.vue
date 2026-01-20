@@ -79,7 +79,6 @@ function toggleStatus() {
   
   emit('update-status', props.task, newStatus)
   
-  // If marking as completed and task has expenses, offer to mark them as paid
   if (newStatus === TaskStatus.Completed && hasExpenses.value) {
     emit('mark-expenses-paid', props.task)
   }
