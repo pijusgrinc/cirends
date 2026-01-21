@@ -96,12 +96,12 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function updateProfile(data: UpdateUserRequest) {
+  async function updateUser(id: number, data: UpdateUserRequest) {
     loading.value = true
     error.value = null
     
     try {
-      const response = await usersAPI.updateProfile(data)
+      const response = await usersAPI.updateUser(id, data)
       
       if (response.ok && response.data) {
         const u: any = response.data
@@ -118,8 +118,8 @@ export const useUserStore = defineStore('user', () => {
         return null
       }
     } catch (e) {
-      error.value = 'Netikėta klaida atnaujinant profilį'
-      console.error('Update profile error:', e)
+      error.value = 'Netikėta klaida atnaujinant naudotoją'
+      console.error('Update user error:', e)
       return null
     } finally {
       loading.value = false
@@ -175,7 +175,7 @@ export const useUserStore = defineStore('user', () => {
     // Actions
     fetchAllUsers,
     fetchUser,
-    updateProfile,
+    updateUser,
     deleteUser,
     clearError,
     reset
