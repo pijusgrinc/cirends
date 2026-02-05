@@ -49,11 +49,6 @@
           />
         </div>
 
-        <!-- Error Message -->
-        <div v-if="error" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p class="text-sm text-red-600">{{ error }}</p>
-        </div>
-
         <!-- Buttons -->
         <div class="form-actions justify-end">
           <Button
@@ -81,6 +76,7 @@
 import { computed, ref, watch } from 'vue'
 import { usersAPI } from '@/api'
 import { Button } from '@/components/common'
+import { useToast } from '@/composables'
 
 const props = defineProps({
   isOpen: {
@@ -94,6 +90,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'success'])
+const { error: showError } = useToast()
 
 const form = ref({
   currentPassword: '',
@@ -143,17 +140,20 @@ const handleSubmit = async () => {
   loading.value = true
 
   try {
-    await usersAPI.changePassword(
-      props.userId,
-      form.value.currentPassword,
-      form.value.newPassword
-    )
+    const response = await usersAPI.changePassword(props.userId, {
+      currentPassword: form.value.currentPassword,
+      newPassword: form.value.newPassword
+    })
     
-    emit('success')
-    closeModal()
+    if (response && !response.error) {
+      emit('success')
+      closeModal()
+    } else {
+      showError(response?.error?.message || 'Neteisingas dabartinis slaptažodis')
+    }
   } catch (err) {
     console.error('Password change error:', err)
-    error.value = err.message || 'Nepavyko pakeisti slaptažodžio'
+    showError(err.message || 'Nepavyko pakeisti slaptažodžio')
   } finally {
     loading.value = false
   }

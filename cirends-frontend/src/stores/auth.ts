@@ -11,7 +11,8 @@ import { Role } from '@/types/enums'
 export const useAuthStore = defineStore('auth', () => {
   // State
   const user = ref<User | null>(null)
-  const token = ref<string | null>(null)
+  // NOTE: Access token is stored in HttpOnly cookie by the server
+  // We do NOT store it in memory/localStorage for security reasons
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hydrated = ref(false)
@@ -57,7 +58,8 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await authAPI.login(credentials.email, credentials.password)
       
       if (response.ok && response.data) {
-        token.value = response.data.token || null
+        // Token is automatically handled in HttpOnly cookie by server
+        // We only store user data
         user.value = normalizeUser(response.data.user)
         try {
           const { useActivitiesStore } = await import('./activities')
@@ -88,7 +90,8 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await authAPI.register(data.email, data.password, data.name)
       
       if (response.ok && response.data) {
-        token.value = response.data.token || null
+        // Token is automatically handled in HttpOnly cookie by server
+        // We only store user data
         user.value = normalizeUser(response.data.user)
         // Post-register: refresh activity data to avoid stale views
         try {
@@ -120,7 +123,6 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (e) {
       console.error('Logout error:', e)
     } finally {
-      token.value = null
       user.value = null
       // Clear other stores to avoid leaking previous user's state
       try {
@@ -211,7 +213,6 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     // State
     user,
-    token,
     loading,
     error,
     

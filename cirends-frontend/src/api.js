@@ -1,5 +1,5 @@
 // API konfiguracija
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://cirends.runasp.net/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 // Header helper
 const getHeaders = (isJson = true, customHeaders = {}) => {
