@@ -6,6 +6,7 @@ using CirendsAPI.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
 
 namespace CirendsAPI.Controllers
 {
@@ -19,20 +20,33 @@ namespace CirendsAPI.Controllers
         private readonly CirendsDbContext _context;
         private readonly ITokenService _tokenService;
         private readonly ILogger<AuthController> _logger;
+        private readonly IWebHostEnvironment _env;
 
-        public AuthController(CirendsDbContext context, ITokenService tokenService, ILogger<AuthController> logger)
+        public AuthController(
+            CirendsDbContext context,
+            ITokenService tokenService,
+            ILogger<AuthController> logger,
+            IWebHostEnvironment env)
         {
             _context = context;
             _tokenService = tokenService;
             _logger = logger;
+            _env = env;
         }
 
-        private CookieOptions BuildCookieOptions(TimeSpan lifetime, bool httpOnly = true)
+        private CookieOptions BuildCookieOptions(
+            TimeSpan lifetime,
+            string path = "/",
+            bool httpOnly = true,
+            SameSiteMode? sameSiteOverride = null)
         {
             // On HTTP (local dev) SameSite=None cookies would be dropped because they require Secure.
             // Relax to Lax when not using HTTPS so the cookie is accepted locally.
-            var isHttps = HttpContext.Request.IsHttps;
-            var sameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax;
+            var isHttps = HttpContext.Request.IsHttps ||
+                          HttpContext.Request.Headers["X-Forwarded-Proto"].ToString() == "https" ||
+                          HttpContext.Request.Host.Host.Contains("runasp.net") ||
+                          _env.IsProduction();
+            var sameSite = sameSiteOverride ?? (isHttps ? SameSiteMode.None : SameSiteMode.Lax);
 
             return new CookieOptions
             {
@@ -40,7 +54,9 @@ namespace CirendsAPI.Controllers
                 Secure = isHttps,
                 SameSite = sameSite,
                 Expires = DateTimeOffset.UtcNow.Add(lifetime),
-                Path = "/"
+                MaxAge = lifetime,
+                Path = path,
+                IsEssential = true
             };
         }
 
@@ -54,12 +70,13 @@ namespace CirendsAPI.Controllers
             Response.Cookies.Append(
                 RefreshTokenCookieName,
                 refreshToken,
-                BuildCookieOptions(TimeSpan.FromDays(7)));
+                BuildCookieOptions(TimeSpan.FromDays(7), path: "/api/Auth/refresh"));
         }
 
         private void ClearAuthCookies()
         {
             Response.Cookies.Delete(AccessTokenCookieName, new CookieOptions { Path = "/" });
+            Response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions { Path = "/api/Auth/refresh" });
             Response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions { Path = "/" });
         }
 
@@ -136,7 +153,6 @@ namespace CirendsAPI.Controllers
 
                 var response = new AuthResponseDto
                 {
-                    Token = token,
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -230,7 +246,6 @@ namespace CirendsAPI.Controllers
 
                 var response = new AuthResponseDto
                 {
-                    Token = token,
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -343,7 +358,6 @@ namespace CirendsAPI.Controllers
 
                 var response = new AuthResponseDto
                 {
-                    Token = newAccessToken,
                     User = new UserDto
                     {
                         Id = user.Id,
@@ -377,26 +391,53 @@ namespace CirendsAPI.Controllers
             try
             {
                 var refreshToken = Request.Cookies[RefreshTokenCookieName] ?? request?.RefreshToken;
-                if (string.IsNullOrWhiteSpace(refreshToken))
+
+                if (!string.IsNullOrWhiteSpace(refreshToken))
                 {
-                    return BadRequest(new { message = "Refresh token is missing", error = "MISSING_REFRESH_TOKEN" });
+                    var refreshTokenEntity = await _context.RefreshTokens
+                        .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+
+                    if (refreshTokenEntity == null)
+                    {
+                        return BadRequest(new { message = "Invalid refresh token", error = "INVALID_REFRESH_TOKEN" });
+                    }
+
+                    refreshTokenEntity.IsRevoked = true;
+                    _context.RefreshTokens.Update(refreshTokenEntity);
+                    await _context.SaveChangesAsync();
                 }
-
-                var refreshTokenEntity = await _context.RefreshTokens
-                    .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
-
-                if (refreshTokenEntity == null)
+                else
                 {
-                    return BadRequest(new { message = "Invalid refresh token", error = "INVALID_REFRESH_TOKEN" });
-                }
+                    var accessToken = request?.Token ?? Request.Cookies[AccessTokenCookieName];
+                    if (string.IsNullOrWhiteSpace(accessToken))
+                    {
+                        return BadRequest(new { message = "Refresh token or access token is missing", error = "MISSING_TOKEN" });
+                    }
 
-                refreshTokenEntity.IsRevoked = true;
-                _context.RefreshTokens.Update(refreshTokenEntity);
-                await _context.SaveChangesAsync();
+                    var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
+                    var userIdClaim = principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+                    if (!int.TryParse(userIdClaim, out var userId))
+                    {
+                        return BadRequest(new { message = "Invalid access token", error = "INVALID_ACCESS_TOKEN" });
+                    }
+
+                    var refreshTokens = await _context.RefreshTokens
+                        .Where(rt => rt.UserId == userId && !rt.IsRevoked)
+                        .ToListAsync();
+
+                    foreach (var token in refreshTokens)
+                    {
+                        token.IsRevoked = true;
+                    }
+
+                    _context.RefreshTokens.UpdateRange(refreshTokens);
+                    await _context.SaveChangesAsync();
+                }
 
                 ClearAuthCookies();
 
-                _logger.LogInformation("User logged out successfully. Refresh token revoked for user: {UserId}", refreshTokenEntity.UserId);
+                _logger.LogInformation("User logged out successfully.");
                 return Ok(new { message = "Logout successful" });
             }
             catch (Exception ex)

@@ -416,13 +416,13 @@ namespace CirendsAPI.Controllers
                     Id = i.Id,
                     ActivityId = i.ActivityId,
                     ActivityName = i.Activity?.Name ?? "Unknown",
-                    InvitedUser = new UserDto
+                    InvitedUser = i.InvitedUser != null ? new UserDto
                     {
-                        Id = i.InvitedUser!.Id,
+                        Id = i.InvitedUser.Id,
                         Name = i.InvitedUser.Name,
                         Email = i.InvitedUser.Email,
                         CreatedAt = i.InvitedUser.CreatedAt
-                    },
+                    } : null,
                     InvitedBy = i.InvitedBy != null ? new UserDto
                     {
                         Id = i.InvitedBy.Id,

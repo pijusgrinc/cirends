@@ -101,16 +101,13 @@ const router = createRouter({
 })
 
 // Navigation guard
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  
-  // Wait for hydration before applying guards
+
   if (!authStore.hydrated) {
-    // Still hydrating; allow navigation but it will likely redirect
-    next()
-    return
+    await authStore.fetchCurrentUser()
   }
-  
+
   const isAuthenticated = authStore.isAuthenticated
 
   if (to.meta.requiresAuth && !isAuthenticated) {

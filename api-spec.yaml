@@ -107,13 +107,13 @@ paths:
         required: true
         content:
           application/json:
-            example: { email: "user@example.com", password: "secret123", name: "Vartotojas" }
+            example: { email: "user@example.com", password: "secret123", name: "Naudotojas" }
       responses:
         "201":
           description: Created
           content:
             application/json:
-              example: { token: "jwt...", refreshToken: "rt...", user: { id: 1, name: "Vartotojas", email: "user@example.com" } }
+              example: { token: "jwt...", refreshToken: "rt...", user: { id: 1, name: "Naudotojas", email: "user@example.com" } }
         "400":
           description: Bad Request
           content: { application/json: { schema: { $ref: "#/components/schemas/ProblemDetails" } } }
@@ -131,7 +131,7 @@ paths:
           description: OK
           content:
             application/json:
-              example: { token: "jwt...", refreshToken: "rt...", user: { id: 1, name: "Vartotojas", email: "user@example.com" } }
+              example: { token: "jwt...", refreshToken: "rt...", user: { id: 1, name: "Naudotojas", email: "user@example.com" } }
         "400": { description: Bad Request }
         "401": { description: Unauthorized }
 
@@ -510,7 +510,7 @@ paths:
           description: OK
           content:
             application/json:
-              example: { id: 1, name: "Vartotojas", email: "user@example.com", role: "Member" }
+              example: { id: 1, name: "Naudotojas", email: "user@example.com", role: "Member" }
         "401": { description: Unauthorized }
 
   /Users/statistics:

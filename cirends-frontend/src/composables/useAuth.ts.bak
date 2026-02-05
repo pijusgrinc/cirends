@@ -1,0 +1,2 @@
+// This file has been removed - functionality moved to useAuthStore
+// To restore, check git history: git show HEAD:src/composables/useAuth.ts
