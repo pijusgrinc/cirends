@@ -188,7 +188,7 @@ function getRoleText(role: Role | string) {
   if (typeof role === 'number') return getRoleLabel(role)
   switch (role) {
     case 'Admin': return 'Administratorius'
-    case 'User': return 'Narys'
+    case 'User': return 'Naudotojas'
     case 'Guest': return 'Svečias'
     default: return role
   }
