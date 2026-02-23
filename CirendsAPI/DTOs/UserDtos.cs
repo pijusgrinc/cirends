@@ -4,17 +4,17 @@ namespace CirendsAPI.DTOs
 {
     public class RegisterDto
     {
-        [Required(ErrorMessage = "Vardas yra b�tinas")]
-        [StringLength(100, MinimumLength = 2, ErrorMessage = "Vardas turi b�ti nuo 2 iki 100 simboli�")]
+        [Required(ErrorMessage = "Vardas yra būtinas")]
+        [StringLength(100, MinimumLength = 2, ErrorMessage = "Vardas turi būti nuo 2 iki 100 simbolių")]
         public string Name { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "El. pa�to adresas yra b�tinas")]
-        [EmailAddress(ErrorMessage = "Neteisingas el. pa�to formatas")]
-        [StringLength(255, ErrorMessage = "El. pa�to adresas negali vir�yti 255 simboli�")]
+        [Required(ErrorMessage = "El. pašto adresas yra būtinas")]
+        [EmailAddress(ErrorMessage = "Neteisingas el. pašto formatas")]
+        [StringLength(255, ErrorMessage = "El. pašto adresas negali viršyti 255 simbolių")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Slapta�odis yra b�tinas")]
-        [StringLength(255, MinimumLength = 6, ErrorMessage = "Slapta�odis turi b�ti nuo 6 iki 255 simboli�")]
+        [Required(ErrorMessage = "Slaptažodis yra būtinas")]
+        [StringLength(255, MinimumLength = 6, ErrorMessage = "Slaptažodis turi bti nuo 6 iki 255 simbolių")]
         public string Password { get; set; } = string.Empty;
 
         public string? Role { get; internal set; }
@@ -22,11 +22,11 @@ namespace CirendsAPI.DTOs
 
     public class LoginDto
     {
-        [Required(ErrorMessage = "El. pa�to adresas yra b�tinas")]
-        [EmailAddress(ErrorMessage = "Neteisingas el. pa�to formatas")]
+        [Required(ErrorMessage = "El. pašto adresas yra būtinas")]
+        [EmailAddress(ErrorMessage = "Neteisingas el. pašto formatas")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Slapta�odis yra b�tinas")]
+        [Required(ErrorMessage = "Slaptažodis yra būtinas")]
         public string Password { get; set; } = string.Empty;
     }
 
@@ -56,11 +56,11 @@ namespace CirendsAPI.DTOs
 
     public class ChangePasswordDto
     {
-        [Required(ErrorMessage = "Dabartinis slapta�odis yra b�tinas")]
+        [Required(ErrorMessage = "Dabartinis slaptažodis yra būtinas")]
         public string CurrentPassword { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Naujas slapta�odis yra b�tinas")]
-        [StringLength(255, MinimumLength = 6, ErrorMessage = "Slapta�odis turi b�ti nuo 6 iki 255 simboli�")]
+        [Required(ErrorMessage = "Naujas slaptažodis yra būtinas")]
+        [StringLength(255, MinimumLength = 6, ErrorMessage = "Slaptažodis turi būti nuo 6 iki 255 simbolių")]
         public string NewPassword { get; set; } = string.Empty;
     }
 
