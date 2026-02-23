@@ -81,9 +81,9 @@ namespace CirendsAPI.Data
                 entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.Currency).IsRequired().HasMaxLength(3);
 
-                entity.HasOne(e => e.Task)
-                    .WithMany(t => t.Expenses)
-                    .HasForeignKey(e => e.TaskId)
+                entity.HasOne(e => e.Activity)
+                    .WithMany(a => a.Expenses)
+                    .HasForeignKey(e => e.ActivityId)
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.PaidBy)

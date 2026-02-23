@@ -307,6 +307,9 @@ namespace CirendsAPI.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ActivityId")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
@@ -333,17 +336,14 @@ namespace CirendsAPI.Migrations
                     b.Property<int>("PaidByUserId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TaskId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PaidByUserId");
+                    b.HasIndex("ActivityId");
 
-                    b.HasIndex("TaskId");
+                    b.HasIndex("PaidByUserId");
 
                     b.ToTable("Expenses");
                 });
@@ -463,35 +463,32 @@ namespace CirendsAPI.Migrations
 
             modelBuilder.Entity("Expense", b =>
                 {
+                    b.HasOne("CirendsAPI.Models.Activity", "Activity")
+                        .WithMany("Expenses")
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("CirendsAPI.Models.User", "PaidBy")
                         .WithMany("ExpensesPaid")
                         .HasForeignKey("PaidByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("CirendsAPI.Models.TaskItem", "Task")
-                        .WithMany("Expenses")
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("Activity");
 
                     b.Navigation("PaidBy");
-
-                    b.Navigation("Task");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.Activity", b =>
                 {
                     b.Navigation("ActivityUsers");
 
+                    b.Navigation("Expenses");
+
                     b.Navigation("Invitations");
 
                     b.Navigation("Tasks");
-                });
-
-            modelBuilder.Entity("CirendsAPI.Models.TaskItem", b =>
-                {
-                    b.Navigation("Expenses");
                 });
 
             modelBuilder.Entity("CirendsAPI.Models.User", b =>

@@ -33,6 +33,7 @@ namespace CirendsAPI.Models
         public User? CreatedBy { get; set; }
 
         public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
+        public ICollection<Expense> Expenses { get; set; } = new List<Expense>();
         public ICollection<ActivityUser> ActivityUsers { get; set; } = new List<ActivityUser>();
         public ICollection<Invitation> Invitations { get; set; } = new List<Invitation>();
     }

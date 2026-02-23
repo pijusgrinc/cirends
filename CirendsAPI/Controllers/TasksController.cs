@@ -90,7 +90,6 @@ namespace CirendsAPI.Controllers
 
                 var task = await _context.Tasks
                     .AsNoTracking()
-                    .Include(t => t.Expenses)
                     .Include(t => t.CreatedBy)
                     .Include(t => t.AssignedTo)
                     .FirstOrDefaultAsync(t => t.Id == id && t.ActivityId == activityId);
@@ -132,29 +131,6 @@ namespace CirendsAPI.Controllers
                         UpdatedAt = task.CreatedBy.UpdatedAt,
                         IsActive = task.CreatedBy.IsActive
                     },
-                    Expenses = task.Expenses.Select(e => new ExpenseDto
-                    {
-                        Id = e.Id,
-                        Name = e.Name,
-                        Description = e.Description,
-                        Amount = e.Amount,
-                        Currency = e.Currency,
-                        ExpenseDate = e.ExpenseDate,
-                        CreatedAt = e.CreatedAt,
-                        UpdatedAt = e.UpdatedAt,
-                        TaskId = e.TaskId,
-                        PaidBy = e.PaidBy != null ? new UserDto
-                        {
-                            Id = e.PaidBy.Id,
-                            Name = e.PaidBy.Name,
-                            Email = e.PaidBy.Email,
-                            Role = e.PaidBy.Role,
-                            CreatedAt = e.PaidBy.CreatedAt,
-                            UpdatedAt = e.PaidBy.UpdatedAt,
-                            IsActive = e.PaidBy.IsActive
-                        } : null,
-                        ExpenseShares = new List<ExpenseShareDto>()
-                    }).ToList()
                 });
             }
             catch (Exception ex)

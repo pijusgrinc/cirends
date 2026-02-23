@@ -15,13 +15,6 @@
       <input id="expenseDate" v-model="form.expenseDate" type="datetime-local" required />
     </div>
 
-    <div v-if="!initialTaskId" class="form-row">
-      <label for="task">Užduotis</label>
-      <select id="task" v-model.number="form.taskId" required>
-        <option v-for="t in tasks" :key="t.id" :value="t.id">{{ t.name }}</option>
-      </select>
-    </div>
-
     <div class="form-row">
       <label for="paidBy">Kas sumokėjo</label>
       <select id="paidBy" v-model.number="form.paidByUserId" required>
@@ -73,24 +66,21 @@ import { reactive, computed, watch } from 'vue'
 import { useExpensesStore } from '@/stores'
 import { Button } from '@/components/common'
 import { toDateTimeLocal } from '@/utils/date'
-import type { CreateExpenseRequest, UpdateExpenseRequest, Task, User, Expense } from '@/types'
+import type { CreateExpenseRequest, UpdateExpenseRequest, User, Expense } from '@/types'
 
 interface Props {
-  tasks: Task[]
   participants: User[]
   expense?: Expense | null
   loading?: boolean
-  initialTaskId?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   expense: null,
-  loading: false,
-  initialTaskId: 0
+  loading: false
 })
 
 const emit = defineEmits<{
-  submit: [payload: (CreateExpenseRequest & { taskId: number }) | (UpdateExpenseRequest & { taskId: number })]
+  submit: [payload: CreateExpenseRequest | UpdateExpenseRequest]
   cancel: []
 }>()
 
@@ -116,7 +106,6 @@ const form = reactive<{
   amount: number
   currency: string
   expenseDate: string
-  taskId: number
   paidByUserId: number
   shares: ShareForm[]
 }>({
@@ -124,16 +113,8 @@ const form = reactive<{
   amount: props.expense?.amount ?? 0,
   currency: props.expense?.currency ?? 'EUR',
   expenseDate: toDateTimeLocal(props.expense?.expenseDate) || '',
-  taskId: props.expense?.taskId ?? props.initialTaskId ?? 0,
   paidByUserId: props.expense?.paidByUserId ?? expensesStore.lastPaidByUserId ?? 0,
   shares: getExpenseShares(props.expense)
-})
-
-// If initialTaskId changes (modal reused) set it when not editing existing expense
-watch(() => props.initialTaskId, (val) => {
-  if (!props.expense && val && val > 0) {
-    form.taskId = val
-  }
 })
 
 // Watch expense changes for edit mode
@@ -143,7 +124,6 @@ watch(() => props.expense, (exp) => {
     form.amount = exp.amount
     form.currency = exp.currency ?? 'EUR'
     form.expenseDate = toDateTimeLocal(exp.expenseDate) || ''
-    form.taskId = exp.taskId
     form.paidByUserId = exp.paidByUserId
     form.shares = getExpenseShares(exp)
   }
@@ -242,8 +222,7 @@ function onSubmit() {
     currency: form.currency,
     expenseDate: form.expenseDate,
     paidByUserId: form.paidByUserId,
-    shares: form.shares,
-    taskId: form.taskId
+    shares: form.shares
   }
   emit('submit', payload)
 }

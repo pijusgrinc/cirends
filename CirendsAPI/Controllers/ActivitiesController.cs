@@ -183,8 +183,7 @@ namespace CirendsAPI.Controllers
                             CreatedAt = (t.CreatedBy ?? throw new InvalidOperationException($"Task {t.Id} missing CreatedBy navigation")).CreatedAt,
                             UpdatedAt = (t.CreatedBy ?? throw new InvalidOperationException($"Task {t.Id} missing CreatedBy navigation")).UpdatedAt,
                             IsActive = (t.CreatedBy ?? throw new InvalidOperationException($"Task {t.Id} missing CreatedBy navigation")).IsActive
-                        },
-                        Expenses = new List<ExpenseDto>()
+                        }
                     }).ToList(),
                     Participants = activity.ActivityUsers.Select(p => new ActivityUserDto
                     {

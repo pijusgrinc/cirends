@@ -26,33 +26,30 @@
           <h2>Išsamios išlaidos</h2>
           <div v-for="group in groupedShares" :key="group.activityId" class="activity-group">
             <h3 class="activity-name">{{ group.activityName }}</h3>
-            <div v-for="taskGroup in group.tasks" :key="taskGroup.taskId" class="task-group">
-              <h4 class="task-name">{{ taskGroup.taskName }}</h4>
-              <div class="expenses-grid">
-                <Card v-for="share in taskGroup.shares" :key="share.id" class="expense-card">
-                  <div class="expense-header">
-                    <h5>{{ share.expenseName }}</h5>
-                    <span :class="['expense-status', share.isPaid ? 'paid' : 'unpaid']">
-                      <Icon :name="share.isPaid ? 'check' : 'pending'" :size="14" />
-                      {{ share.isPaid ? 'Sumokėta' : 'Nesumokėta' }}
-                    </span>
+            <div class="expenses-grid">
+              <Card v-for="share in group.shares" :key="share.id" class="expense-card">
+                <div class="expense-header">
+                  <h5>{{ share.expenseName }}</h5>
+                  <span :class="['expense-status', share.isPaid ? 'paid' : 'unpaid']">
+                    <Icon :name="share.isPaid ? 'check' : 'pending'" :size="14" />
+                    {{ share.isPaid ? 'Sumokėta' : 'Nesumokėta' }}
+                  </span>
+                </div>
+                <div class="expense-details">
+                  <div class="detail-row">
+                    <span class="label">Jūsų dalis:</span>
+                    <span class="value">{{ formatCurrency(share.shareAmount) }}</span>
                   </div>
-                  <div class="expense-details">
-                    <div class="detail-row">
-                      <span class="label">Jūsų dalis:</span>
-                      <span class="value">{{ formatCurrency(share.shareAmount) }}</span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="label">Sumokėjo:</span>
-                      <span class="value">{{ share.paidByName }}</span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="label">Išlaidų data:</span>
-                      <span class="value">{{ formatDate(share.expenseDate) }}</span>
-                    </div>
+                  <div class="detail-row">
+                    <span class="label">Sumokėjo:</span>
+                    <span class="value">{{ share.paidByName }}</span>
                   </div>
-                </Card>
-              </div>
+                  <div class="detail-row">
+                    <span class="label">Išlaidų data:</span>
+                    <span class="value">{{ formatDate(share.expenseDate) }}</span>
+                  </div>
+                </div>
+              </Card>
             </div>
           </div>
         </div>
@@ -69,7 +66,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useAuthStore, useActivitiesStore } from '@/stores'
+import { useAuthStore, useActivitiesStore, useExpensesStore } from '@/stores'
 import { Loading, EmptyState, Card } from '@/components/common'
 import { Icon } from '@/components/icons'
 import { formatDate } from '@/utils/date'
@@ -77,6 +74,7 @@ import { useToast } from '@/composables'
 
 const authStore = useAuthStore()
 const activitiesStore = useActivitiesStore()
+const expensesStore = useExpensesStore()
 const { error } = useToast()
 
 const loading = ref(false)
@@ -90,8 +88,6 @@ interface ShareWithContext {
   paidByName: string
   activityId: number
   activityName: string
-  taskId: number
-  taskName: string
 }
 
 const myShares = ref<ShareWithContext[]>([])
@@ -104,16 +100,10 @@ const totalPaid = computed(() =>
   myShares.value.filter(s => s.isPaid).reduce((sum, s) => sum + s.shareAmount, 0)
 )
 
-interface TaskGroup {
-  taskId: number
-  taskName: string
-  shares: ShareWithContext[]
-}
-
 interface ActivityGroup {
   activityId: number
   activityName: string
-  tasks: TaskGroup[]
+  shares: ShareWithContext[]
 }
 
 const groupedShares = computed<ActivityGroup[]>(() => {
@@ -125,22 +115,12 @@ const groupedShares = computed<ActivityGroup[]>(() => {
       activityGroup = {
         activityId: share.activityId,
         activityName: share.activityName,
-        tasks: []
+        shares: []
       }
       groups.set(share.activityId, activityGroup)
     }
-    
-    let taskGroup = activityGroup.tasks.find(t => t.taskId === share.taskId)
-    if (!taskGroup) {
-      taskGroup = {
-        taskId: share.taskId,
-        taskName: share.taskName,
-        shares: []
-      }
-      activityGroup.tasks.push(taskGroup)
-    }
-    
-    taskGroup.shares.push(share)
+
+    activityGroup.shares.push(share)
   }
   
   return Array.from(groups.values())
@@ -165,37 +145,28 @@ async function loadMyExpenses() {
 
     const shares: ShareWithContext[] = []
 
-    // For each activity, get tasks and expenses
+    // For each activity, get expenses
     for (const activity of activities) {
-      // Fetch detailed activity with tasks
-      await activitiesStore.fetchActivity(activity.id)
-      const detailedActivity = activitiesStore.getActivity(activity.id)
-      
-      if (!detailedActivity?.tasks) continue
+      await expensesStore.fetchExpenses(activity.id)
+      const expenses = expensesStore.getExpenses(activity.id)
 
-      for (const task of detailedActivity.tasks) {
-        if (!task.expenses) continue
+      for (const expense of expenses) {
+        const expenseShares = expense.expenseShares || expense.shares || []
+        if (expenseShares.length === 0) continue
 
-        for (const expense of task.expenses) {
-          if (!expense.shares) continue
+        const userShares = expenseShares.filter((s: any) => s.userId === currentUserId)
 
-          // Find shares belonging to current user
-          const userShares = expense.shares.filter((s: any) => s.userId === currentUserId)
-          
-          for (const share of userShares) {
-            shares.push({
-              id: share.id,
-              shareAmount: share.shareAmount,
-              isPaid: share.isPaid,
-              expenseName: expense.name,
-              expenseDate: expense.expenseDate,
-              paidByName: expense.paidBy?.name || 'Nežinomas',
-              activityId: activity.id,
-              activityName: activity.name,
-              taskId: task.id,
-              taskName: task.name
-            })
-          }
+        for (const share of userShares) {
+          shares.push({
+            id: share.id,
+            shareAmount: share.shareAmount,
+            isPaid: share.isPaid,
+            expenseName: expense.name,
+            expenseDate: expense.expenseDate,
+            paidByName: expense.paidBy?.name || 'Nežinomas',
+            activityId: activity.id,
+            activityName: activity.name
+          })
         }
       }
     }

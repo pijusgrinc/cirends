@@ -8,41 +8,48 @@ namespace CirendsAPI.Services
 {
     public interface IExpenseService
     {
-        Task<IEnumerable<ExpenseDto>> GetExpensesAsync(int activityId, int taskId, int userId);
+        Task<IEnumerable<ExpenseDto>> GetExpensesAsync(int activityId, int userId);
 
-        Task<ExpenseDto> GetExpenseAsync(int activityId, int taskId, int expenseId, int userId);
+        Task<ExpenseDto> GetExpenseAsync(int activityId, int expenseId, int userId);
 
-        Task<ExpenseDto> CreateExpenseAsync(int activityId, int taskId, int userId, CreateExpenseDto createExpenseDto);
+        Task<ExpenseDto> CreateExpenseAsync(int activityId, int userId, CreateExpenseDto createExpenseDto);
 
-        Task UpdateExpenseAsync(int activityId, int taskId, int expenseId, int userId, UpdateExpenseDto updateExpenseDto);
+        Task UpdateExpenseAsync(int activityId, int expenseId, int userId, UpdateExpenseDto updateExpenseDto);
 
-        Task DeleteExpenseAsync(int activityId, int taskId, int expenseId, int userId);
+        Task DeleteExpenseAsync(int activityId, int expenseId, int userId);
     }
 
     public class ExpenseService : IExpenseService
     {
         private readonly CirendsDbContext _context;
-        private readonly ITaskService _taskService;
         private readonly IMapper _mapper;
 
-        public ExpenseService(CirendsDbContext context, ITaskService taskService, IMapper mapper)
+        public ExpenseService(CirendsDbContext context, IMapper mapper)
         {
             _context = context;
-            _taskService = taskService;
             _mapper = mapper;
         }
 
-        public async Task<ExpenseDto> GetExpenseAsync(int activityId, int taskId, int expenseId, int userId)
+        public async Task<ExpenseDto> GetExpenseAsync(int activityId, int expenseId, int userId)
         {
-            var task = await _taskService.GetTaskAsync(activityId, taskId, userId);
-            if (task == null)
-                throw new NotFoundException("Task not found");
+            var activity = await _context.Activities
+                .Include(a => a.ActivityUsers)
+                .FirstOrDefaultAsync(a => a.Id == activityId);
+
+            if (activity == null)
+                throw new NotFoundException("Activity not found");
+
+            var hasAccess = activity.CreatedByUserId == userId ||
+                            activity.ActivityUsers.Any(au => au.UserId == userId);
+
+            if (!hasAccess)
+                throw new CirendsAPI.Exceptions.UnauthorizedAccessException("No access to this activity");
 
             var expense = await _context.Expenses
                 .Include(e => e.PaidBy)
                 .Include(e => e.ExpenseShares)
                 .ThenInclude(es => es.User)
-                .FirstOrDefaultAsync(e => e.Id == expenseId && e.TaskId == taskId);
+                .FirstOrDefaultAsync(e => e.Id == expenseId && e.ActivityId == activityId);
 
             if (expense == null)
                 throw new NotFoundException("Expense not found");
@@ -50,23 +57,23 @@ namespace CirendsAPI.Services
             return _mapper.Map<ExpenseDto>(expense);
         }
 
-        public async Task<IEnumerable<ExpenseDto>> GetExpensesAsync(int activityId, int taskId, int userId)
+        public async Task<IEnumerable<ExpenseDto>> GetExpensesAsync(int activityId, int userId)
         {
-            var task = await _context.Tasks
-                .Include(t => t.Activity)
-                .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
+            var activity = await _context.Activities
+                .Include(a => a.ActivityUsers)
+                .FirstOrDefaultAsync(a => a.Id == activityId);
 
-            if (task == null)
-                throw new NotFoundException("Task not found");
+            if (activity == null)
+                throw new NotFoundException("Activity not found");
 
-            var hasAccess = task.Activity.CreatedByUserId == userId ||
-                            task.Activity.ActivityUsers.Any(au => au.UserId == userId);
+            var hasAccess = activity.CreatedByUserId == userId ||
+                            activity.ActivityUsers.Any(au => au.UserId == userId);
 
             if (!hasAccess)
                 throw new CirendsAPI.Exceptions.UnauthorizedAccessException("No access to this activity");
 
             var expenses = await _context.Expenses
-                .Where(e => e.TaskId == taskId)
+                .Where(e => e.ActivityId == activityId)
                 .Include(e => e.PaidBy)
                 .Include(e => e.ExpenseShares)
                 .ThenInclude(es => es.User)
@@ -75,17 +82,17 @@ namespace CirendsAPI.Services
             return expenses.Select(e => _mapper.Map<ExpenseDto>(e));
         }
 
-        public async Task<ExpenseDto> CreateExpenseAsync(int activityId, int taskId, int userId, CreateExpenseDto createExpenseDto)
+        public async Task<ExpenseDto> CreateExpenseAsync(int activityId, int userId, CreateExpenseDto createExpenseDto)
         {
-            var task = await _context.Tasks
-                .Include(t => t.Activity)
-                .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
+            var activity = await _context.Activities
+                .Include(a => a.ActivityUsers)
+                .FirstOrDefaultAsync(a => a.Id == activityId);
 
-            if (task == null)
-                throw new NotFoundException("Task not found");
+            if (activity == null)
+                throw new NotFoundException("Activity not found");
 
-            var hasAccess = task.Activity.CreatedByUserId == userId ||
-                            task.Activity.ActivityUsers.Any(au => au.UserId == userId);
+            var hasAccess = activity.CreatedByUserId == userId ||
+                            activity.ActivityUsers.Any(au => au.UserId == userId);
 
             if (!hasAccess)
                 throw new CirendsAPI.Exceptions.UnauthorizedAccessException("No access to this activity");
@@ -97,7 +104,7 @@ namespace CirendsAPI.Services
                 Amount = createExpenseDto.Amount,
                 Currency = createExpenseDto.Currency,
                 ExpenseDate = createExpenseDto.ExpenseDate,
-                TaskId = taskId,
+                ActivityId = activityId,
                 PaidByUserId = userId
             };
 
@@ -113,29 +120,38 @@ namespace CirendsAPI.Services
             return _mapper.Map<ExpenseDto>(createdExpense);
         }
 
-        public async Task UpdateExpenseAsync(int activityId, int taskId, int expenseId, int userId, UpdateExpenseDto updateExpenseDto)
+        public async Task UpdateExpenseAsync(int activityId, int expenseId, int userId, UpdateExpenseDto updateExpenseDto)
         {
-            var expense = await GetExpenseForUpdate(activityId, taskId, expenseId, userId);
+            var expense = await GetExpenseForUpdate(activityId, expenseId, userId);
             _mapper.Map(updateExpenseDto, expense);
             expense.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteExpenseAsync(int activityId, int taskId, int expenseId, int userId)
+        public async Task DeleteExpenseAsync(int activityId, int expenseId, int userId)
         {
-            var expense = await GetExpenseForUpdate(activityId, taskId, expenseId, userId);
+            var expense = await GetExpenseForUpdate(activityId, expenseId, userId);
             _context.Expenses.Remove(expense);
             await _context.SaveChangesAsync();
         }
 
-        private async Task<Expense> GetExpenseForUpdate(int activityId, int taskId, int expenseId, int userId)
+        private async Task<Expense> GetExpenseForUpdate(int activityId, int expenseId, int userId)
         {
-            var task = await _taskService.GetTaskAsync(activityId, taskId, userId);
-            if (task == null)
-                throw new NotFoundException("Task not found");
+            var activity = await _context.Activities
+                .Include(a => a.ActivityUsers)
+                .FirstOrDefaultAsync(a => a.Id == activityId);
+
+            if (activity == null)
+                throw new NotFoundException("Activity not found");
+
+            var hasAccess = activity.CreatedByUserId == userId ||
+                            activity.ActivityUsers.Any(au => au.UserId == userId);
+
+            if (!hasAccess)
+                throw new CirendsAPI.Exceptions.UnauthorizedAccessException("No access to this activity");
 
             var expense = await _context.Expenses
-                .FirstOrDefaultAsync(e => e.Id == expenseId && e.TaskId == taskId);
+                .FirstOrDefaultAsync(e => e.Id == expenseId && e.ActivityId == activityId);
 
             if (expense == null)
                 throw new NotFoundException("Expense not found");

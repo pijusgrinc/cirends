@@ -51,11 +51,6 @@ namespace CirendsAPI.Services
             var task = await _context.Tasks
                 .Include(t => t.AssignedTo)
                 .Include(t => t.CreatedBy)
-                .Include(t => t.Expenses)
-                .ThenInclude(e => e.PaidBy)
-                .Include(t => t.Expenses)
-                .ThenInclude(e => e.ExpenseShares)
-                .ThenInclude(es => es.User)
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
 
             return task;
@@ -73,8 +68,6 @@ namespace CirendsAPI.Services
             return await _context.Tasks
                 .Include(t => t.AssignedTo)
                 .Include(t => t.CreatedBy)
-                .Include(t => t.Expenses)
-                .ThenInclude(e => e.PaidBy)
                 .Where(t => t.ActivityId == activityId)
                 .ToListAsync();
         }

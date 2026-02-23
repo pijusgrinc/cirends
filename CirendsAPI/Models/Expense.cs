@@ -27,13 +27,13 @@ public class Expense
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Foreign keys
-    public int TaskId { get; set; }
+    public int ActivityId { get; set; }
 
     public int PaidByUserId { get; set; }
 
     // Navigation properties
-    [ForeignKey("TaskId")]
-    public TaskItem? Task { get; set; }
+    [ForeignKey("ActivityId")]
+    public Activity? Activity { get; set; }
 
     [ForeignKey("PaidByUserId")]
     public User? PaidBy { get; set; }

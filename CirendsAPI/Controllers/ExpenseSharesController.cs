@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CirendsAPI.Controllers
 {
     [ApiController]
-    [Route("api/activities/{activityId}/tasks/{taskId}/expenses/{expenseId}/shares")]
+    [Route("api/activities/{activityId}/expenses/{expenseId}/shares")]
     [Authorize]
     public class ExpenseSharesController : ControllerBase
     {
@@ -29,14 +29,12 @@ namespace CirendsAPI.Controllers
         [ProducesResponseType(403)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> MarkShareAsPaid(
-            int activityId, 
-            int taskId, 
-            int expenseId, 
+            int activityId,
+            int expenseId,
             int shareId)
         {
             var validation = ValidationHelper.ValidateHierarchyIds(
-                (activityId, "activityId"), 
-                (taskId, "taskId"), 
+                (activityId, "activityId"),
                 (expenseId, "expenseId"),
                 (shareId, "shareId"));
             
@@ -51,10 +49,9 @@ namespace CirendsAPI.Controllers
             {
                 // Verify hierarchy
                 var expense = await _context.Expenses
-                    .Include(e => e.Task)
-                    .FirstOrDefaultAsync(e => e.Id == expenseId && e.TaskId == taskId);
+                    .FirstOrDefaultAsync(e => e.Id == expenseId && e.ActivityId == activityId);
 
-                if (expense == null || expense.Task?.ActivityId != activityId)
+                if (expense == null)
                 {
                     return NotFound(new { message = "Expense not found or hierarchy mismatch", error = "EXPENSE_NOT_FOUND" });
                 }
@@ -95,14 +92,12 @@ namespace CirendsAPI.Controllers
         [ProducesResponseType(403)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> UnmarkShareAsPaid(
-            int activityId, 
-            int taskId, 
-            int expenseId, 
+            int activityId,
+            int expenseId,
             int shareId)
         {
             var validation = ValidationHelper.ValidateHierarchyIds(
-                (activityId, "activityId"), 
-                (taskId, "taskId"), 
+                (activityId, "activityId"),
                 (expenseId, "expenseId"),
                 (shareId, "shareId"));
             
@@ -117,10 +112,9 @@ namespace CirendsAPI.Controllers
             {
                 // Verify hierarchy
                 var expense = await _context.Expenses
-                    .Include(e => e.Task)
-                    .FirstOrDefaultAsync(e => e.Id == expenseId && e.TaskId == taskId);
+                    .FirstOrDefaultAsync(e => e.Id == expenseId && e.ActivityId == activityId);
 
-                if (expense == null || expense.Task?.ActivityId != activityId)
+                if (expense == null)
                 {
                     return NotFound(new { message = "Expense not found or hierarchy mismatch", error = "EXPENSE_NOT_FOUND" });
                 }
@@ -153,21 +147,17 @@ namespace CirendsAPI.Controllers
         }
 
         /// <summary>
-        /// Mark all expense shares for a task as paid (for task completion workflow)
+        /// Mark all expense shares for an activity as paid
         /// </summary>
-        [HttpPost("/api/activities/{activityId}/tasks/{taskId}/expenses/mark-all-paid")]
+        [HttpPost("/api/activities/{activityId}/expenses/mark-all-paid")]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(403)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> MarkAllExpensesAsPaidForTask(
-            int activityId,
-            int taskId)
+        public async Task<IActionResult> MarkAllExpensesAsPaidForActivity(
+            int activityId)
         {
             var validation = ValidationHelper.ValidatePositiveId(activityId, "activityId");
-            if (validation != null) return validation;
-
-            validation = ValidationHelper.ValidatePositiveId(taskId, "taskId");
             if (validation != null) return validation;
 
             if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
@@ -177,21 +167,20 @@ namespace CirendsAPI.Controllers
 
             try
             {
-                var task = await _context.Tasks
-                    .Include(t => t.Activity)
-                        .ThenInclude(a => a!.ActivityUsers)
-                    .Include(t => t.Expenses)
+                var activity = await _context.Activities
+                    .Include(a => a.ActivityUsers)
+                    .Include(a => a.Expenses)
                         .ThenInclude(e => e.ExpenseShares)
-                    .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
+                    .FirstOrDefaultAsync(a => a.Id == activityId);
 
-                if (task?.Activity == null)
+                if (activity == null)
                 {
-                    return NotFound(new { message = "Task not found", error = "TASK_NOT_FOUND" });
+                    return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
                 }
 
                 // Check authorization - creator, participant, or admin
-                var isCreator = task.Activity.CreatedByUserId == userId;
-                var isActivityMember = task.Activity.ActivityUsers.Any(au => au.UserId == userId);
+                var isCreator = activity.CreatedByUserId == userId;
+                var isActivityMember = activity.ActivityUsers.Any(au => au.UserId == userId);
                 var isAdmin = User.IsInRole("Admin");
 
                 if (!isCreator && !isActivityMember && !isAdmin)
@@ -201,7 +190,7 @@ namespace CirendsAPI.Controllers
 
                 // Mark all expense shares as paid
                 var now = DateTime.UtcNow;
-                foreach (var expense in task.Expenses)
+                foreach (var expense in activity.Expenses)
                 {
                     foreach (var share in expense.ExpenseShares)
                     {
@@ -219,7 +208,7 @@ namespace CirendsAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error marking all expenses as paid for task {TaskId}", taskId);
+                _logger.LogError(ex, "Error marking all expenses as paid for activity {ActivityId}", activityId);
                 return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
             }
         }

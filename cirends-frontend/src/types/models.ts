@@ -43,7 +43,7 @@ export interface ActivityUser {
 
 /**
  * Užduotis - priskiriama veiklai
- * Turi atsakingą asmenį ir gali turėti išlaidų
+ * Turi atsakingą asmenį
  */
 export interface Task {
   id: number
@@ -56,25 +56,23 @@ export interface Task {
   createdAt: string
   assignedUser?: User
   activity?: Activity
-  expenses?: Expense[]
   totalExpenses?: number
 }
 
 /**
- * Išlaidos - priskiriama užduočiai arba veiklai
+ * Išlaidos - priskiriama veiklai
  * Leidžia sekti finansus ir paskirstyti tarp dalyvių
  */
 export interface Expense {
   id: number
   name: string
   amount: number
-  taskId: number
+  activityId: number
   expenseDate: string
   currency?: string
   paidByUserId: number
   createdAt: string
   paidBy?: User
-  task?: Task
   shares?: ExpenseShare[]
   expenseShares?: ExpenseShare[]  // API grąžina su šiuo vardu
 }

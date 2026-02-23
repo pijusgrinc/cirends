@@ -55,7 +55,6 @@ const emit = defineEmits<{
   edit: [task: Task]
   delete: [task: Task]
   'update-status': [task: Task, status: TaskStatus]
-  'mark-expenses-paid': [task: Task]
 }>()
 
 const statusClass = computed(() => {
@@ -79,14 +78,7 @@ function toggleStatus() {
   
   emit('update-status', props.task, newStatus)
   
-  if (newStatus === TaskStatus.Completed && hasExpenses.value) {
-    emit('mark-expenses-paid', props.task)
-  }
 }
-
-const hasExpenses = computed(() => {
-  return props.task.expenses && props.task.expenses.length > 0
-})
 </script>
 
 <style scoped>

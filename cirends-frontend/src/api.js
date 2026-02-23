@@ -246,48 +246,48 @@ export const tasksAPI = {
 // ============== IŠLAIDOS ==============
 
 export const expensesAPI = {
-  async getAll(activityId, taskId) {
-    return apiCall(`/activities/${activityId}/tasks/${taskId}/expenses`)
+  async getAll(activityId) {
+    return apiCall(`/activities/${activityId}/expenses`)
   },
   
-  async getById(activityId, taskId, expenseId) {
-    return apiCall(`/activities/${activityId}/tasks/${taskId}/expenses/${expenseId}`)
+  async getById(activityId, expenseId) {
+    return apiCall(`/activities/${activityId}/expenses/${expenseId}`)
   },
   
-  async create(activityId, taskId, data) {
-    return apiCall(`/activities/${activityId}/tasks/${taskId}/expenses`, {
+  async create(activityId, data) {
+    return apiCall(`/activities/${activityId}/expenses`, {
       method: 'POST',
       body: data
     })
   },
   
-  async update(activityId, taskId, expenseId, data) {
-    return apiCall(`/activities/${activityId}/tasks/${taskId}/expenses/${expenseId}`, {
+  async update(activityId, expenseId, data) {
+    return apiCall(`/activities/${activityId}/expenses/${expenseId}`, {
       method: 'PUT',
       body: data
     })
   },
   
-  async delete(activityId, taskId, expenseId) {
-    return apiCall(`/activities/${activityId}/tasks/${taskId}/expenses/${expenseId}`, {
+  async delete(activityId, expenseId) {
+    return apiCall(`/activities/${activityId}/expenses/${expenseId}`, {
       method: 'DELETE'
     })
   },
 
-  async markShareAsPaid(activityId, taskId, expenseId, shareId) {
-    return apiCall(`/activities/${activityId}/tasks/${taskId}/expenses/${expenseId}/shares/${shareId}/mark-paid`, {
+  async markShareAsPaid(activityId, expenseId, shareId) {
+    return apiCall(`/activities/${activityId}/expenses/${expenseId}/shares/${shareId}/mark-paid`, {
       method: 'PATCH'
     })
   },
 
-  async unmarkShareAsPaid(activityId, taskId, expenseId, shareId) {
-    return apiCall(`/activities/${activityId}/tasks/${taskId}/expenses/${expenseId}/shares/${shareId}/unmark-paid`, {
+  async unmarkShareAsPaid(activityId, expenseId, shareId) {
+    return apiCall(`/activities/${activityId}/expenses/${expenseId}/shares/${shareId}/unmark-paid`, {
       method: 'PATCH'
     })
   },
 
-  async markAllExpensesAsPaidForTask(activityId, taskId) {
-    return apiCall(`/activities/${activityId}/tasks/${taskId}/expenses/mark-all-paid`, {
+  async markAllExpensesAsPaidForActivity(activityId) {
+    return apiCall(`/activities/${activityId}/expenses/mark-all-paid`, {
       method: 'POST'
     })
   }

@@ -6,33 +6,33 @@ import { toUtcIso } from '@/utils/date'
 
 /**
  * Išlaidų store
- * Išlaidos yra žemiausias hierarchijos lygis: Veikla → Užduotys → Išlaidos
- * Kiekviena išlaida priklauso užduočiai ir gali būti paskirstyta tarp dalyvių
+ * Išlaidos yra veiklos lygio objektas: Veikla → Išlaidos
+ * Kiekviena išlaida priklauso veiklai ir gali būti paskirstyta tarp dalyvių
  */
 export const useExpensesStore = defineStore('expenses', () => {
-  // State - expenses pagal activityId ir taskId
-  const expensesByTask = ref<Record<string, Expense[]>>({})
+  // State - expenses pagal activityId
+  const expensesByActivity = ref<Record<string, Expense[]>>({})
   const currentExpense = ref<Expense | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const lastPaidByUserId = ref<number | null>(null)
 
   // Helper funkcija raktui generuoti
-  const getKey = (activityId: number, taskId: number) => `${activityId}-${taskId}`
+  const getKey = (activityId: number) => `${activityId}`
 
   // Getters
-  const getExpenses = computed(() => (activityId: number, taskId: number) => {
-    const key = getKey(activityId, taskId)
-    return expensesByTask.value[key] || []
+  const getExpenses = computed(() => (activityId: number) => {
+    const key = getKey(activityId)
+    return expensesByActivity.value[key] || []
   })
 
-  const getTotalExpenses = computed(() => (activityId: number, taskId: number) => {
-    const expenses = getExpenses.value(activityId, taskId)
+  const getTotalExpenses = computed(() => (activityId: number) => {
+    const expenses = getExpenses.value(activityId)
     return expenses.reduce((sum, exp) => sum + exp.amount, 0)
   })
 
-  const getExpenseSummary = computed(() => (activityId: number, taskId: number, userId: number): ExpenseSummary => {
-    const expenses = getExpenses.value(activityId, taskId)
+  const getExpenseSummary = computed(() => (activityId: number, userId: number): ExpenseSummary => {
+    const expenses = getExpenses.value(activityId)
     
     let myShare = 0
     let myPaid = 0
@@ -50,7 +50,7 @@ export const useExpensesStore = defineStore('expenses', () => {
       }
     })
     
-    const totalAmount = getTotalExpenses.value(activityId, taskId)
+    const totalAmount = getTotalExpenses.value(activityId)
     const balance = myPaid - myShare // positive = permoka, negative = skola
     
     return {
@@ -63,21 +63,21 @@ export const useExpensesStore = defineStore('expenses', () => {
   })
 
   // Actions
-  async function fetchExpenses(activityId: number, taskId: number, forceRefresh = false) {
-    const key = getKey(activityId, taskId)
+  async function fetchExpenses(activityId: number, forceRefresh = false) {
+    const key = getKey(activityId)
     
-    if (expensesByTask.value[key] && !forceRefresh) {
-      return expensesByTask.value[key]
+    if (expensesByActivity.value[key] && !forceRefresh) {
+      return expensesByActivity.value[key]
     }
 
     loading.value = true
     error.value = null
     
     try {
-      const response = await expensesAPI.getAll(activityId, taskId)
+      const response = await expensesAPI.getAll(activityId)
       
       if (response.ok && response.data) {
-        expensesByTask.value[key] = response.data
+        expensesByActivity.value[key] = response.data
         return response.data
       } else {
         error.value = response.error?.message || 'Nepavyko gauti išlaidų'
@@ -92,22 +92,22 @@ export const useExpensesStore = defineStore('expenses', () => {
     }
   }
 
-  async function fetchExpense(activityId: number, taskId: number, expenseId: number) {
+  async function fetchExpense(activityId: number, expenseId: number) {
     loading.value = true
     error.value = null
     
     try {
-      const response = await expensesAPI.getById(activityId, taskId, expenseId)
+      const response = await expensesAPI.getById(activityId, expenseId)
       
       if (response.ok && response.data) {
         currentExpense.value = response.data
         
         // Atnaujinti cache'e
-        const key = getKey(activityId, taskId)
-        if (expensesByTask.value[key]) {
-          const index = expensesByTask.value[key].findIndex(e => e.id === expenseId)
+        const key = getKey(activityId)
+        if (expensesByActivity.value[key]) {
+          const index = expensesByActivity.value[key].findIndex(e => e.id === expenseId)
           if (index !== -1) {
-            expensesByTask.value[key][index] = response.data
+            expensesByActivity.value[key][index] = response.data
           }
         }
         
@@ -125,7 +125,7 @@ export const useExpensesStore = defineStore('expenses', () => {
     }
   }
 
-  async function createExpense(activityId: number, taskId: number, data: CreateExpenseRequest) {
+  async function createExpense(activityId: number, data: CreateExpenseRequest) {
     loading.value = true
     error.value = null
     
@@ -134,16 +134,16 @@ export const useExpensesStore = defineStore('expenses', () => {
         ...data,
         expenseDate: toUtcIso((data as any).expenseDate) || new Date().toISOString()
       }
-      const response = await expensesAPI.create(activityId, taskId, payload)
+      const response = await expensesAPI.create(activityId, payload)
       
       if (response.ok && response.data) {
-        const key = getKey(activityId, taskId)
+        const key = getKey(activityId)
         
         // Pridėti į cache
-        if (!expensesByTask.value[key]) {
-          expensesByTask.value[key] = []
+        if (!expensesByActivity.value[key]) {
+          expensesByActivity.value[key] = []
         }
-        expensesByTask.value[key].push(response.data)
+        expensesByActivity.value[key].push(response.data)
         // Persist last paidBy
         lastPaidByUserId.value = response.data.paidByUserId
         
@@ -163,7 +163,6 @@ export const useExpensesStore = defineStore('expenses', () => {
 
   async function updateExpense(
     activityId: number, 
-    taskId: number, 
     expenseId: number, 
     data: UpdateExpenseRequest
   ) {
@@ -175,21 +174,21 @@ export const useExpensesStore = defineStore('expenses', () => {
         ...data,
         expenseDate: (data as any).expenseDate ? (toUtcIso((data as any).expenseDate) || undefined) : undefined
       }
-      const response = await expensesAPI.update(activityId, taskId, expenseId, payload)
+      const response = await expensesAPI.update(activityId, expenseId, payload)
       
       // Handle 204 No Content response (successful update)
       if (response.ok) {
         // Refetch to get updated data
-        const refetchResponse = await expensesAPI.getById(activityId, taskId, expenseId)
+        const refetchResponse = await expensesAPI.getById(activityId, expenseId)
         
         if (refetchResponse.ok && refetchResponse.data) {
-          const key = getKey(activityId, taskId)
+          const key = getKey(activityId)
           
           // Update cache
-          if (expensesByTask.value[key]) {
-            const index = expensesByTask.value[key].findIndex(e => e.id === expenseId)
+          if (expensesByActivity.value[key]) {
+            const index = expensesByActivity.value[key].findIndex(e => e.id === expenseId)
             if (index !== -1) {
-              expensesByTask.value[key][index] = refetchResponse.data
+              expensesByActivity.value[key][index] = refetchResponse.data
             }
           }
           
@@ -217,19 +216,19 @@ export const useExpensesStore = defineStore('expenses', () => {
     }
   }
 
-  async function deleteExpense(activityId: number, taskId: number, expenseId: number) {
+  async function deleteExpense(activityId: number, expenseId: number) {
     loading.value = true
     error.value = null
     
     try {
-      const response = await expensesAPI.delete(activityId, taskId, expenseId)
+      const response = await expensesAPI.delete(activityId, expenseId)
       
       if (response.ok) {
-        const key = getKey(activityId, taskId)
+        const key = getKey(activityId)
         
         // Pašalinti iš cache
-        if (expensesByTask.value[key]) {
-          expensesByTask.value[key] = expensesByTask.value[key].filter(
+        if (expensesByActivity.value[key]) {
+          expensesByActivity.value[key] = expensesByActivity.value[key].filter(
             e => e.id !== expenseId
           )
         }
@@ -261,13 +260,13 @@ export const useExpensesStore = defineStore('expenses', () => {
     currentExpense.value = null
   }
 
-  function clearExpensesForTask(activityId: number, taskId: number) {
-    const key = getKey(activityId, taskId)
-    delete expensesByTask.value[key]
+  function clearExpensesForActivity(activityId: number) {
+    const key = getKey(activityId)
+    delete expensesByActivity.value[key]
   }
 
   function reset() {
-    expensesByTask.value = {}
+    expensesByActivity.value = {}
     currentExpense.value = null
     loading.value = false
     error.value = null
@@ -276,7 +275,6 @@ export const useExpensesStore = defineStore('expenses', () => {
 
   async function markShareAsPaid(
     activityId: number, 
-    taskId: number, 
     expenseId: number, 
     shareId: number
   ) {
@@ -284,11 +282,11 @@ export const useExpensesStore = defineStore('expenses', () => {
     error.value = null
     
     try {
-      const response = await expensesAPI.markShareAsPaid(activityId, taskId, expenseId, shareId)
+      const response = await expensesAPI.markShareAsPaid(activityId, expenseId, shareId)
       
       if (response.ok) {
         // Refresh expense data
-        await fetchExpenses(activityId, taskId, true)
+        await fetchExpenses(activityId, true)
         return true
       } else {
         error.value = response.error?.message || 'Nepavyko patvirtinti mokėjimo'
@@ -305,7 +303,6 @@ export const useExpensesStore = defineStore('expenses', () => {
 
   async function unmarkShareAsPaid(
     activityId: number, 
-    taskId: number, 
     expenseId: number, 
     shareId: number
   ) {
@@ -313,11 +310,11 @@ export const useExpensesStore = defineStore('expenses', () => {
     error.value = null
     
     try {
-      const response = await expensesAPI.unmarkShareAsPaid(activityId, taskId, expenseId, shareId)
+      const response = await expensesAPI.unmarkShareAsPaid(activityId, expenseId, shareId)
       
       if (response.ok) {
         // Refresh expense data
-        await fetchExpenses(activityId, taskId, true)
+        await fetchExpenses(activityId, true)
         return true
       } else {
         error.value = response.error?.message || 'Nepavyko atšaukti mokėjimo patvirtinimo'
@@ -334,7 +331,7 @@ export const useExpensesStore = defineStore('expenses', () => {
 
   return {
     // State
-    expensesByTask,
+    expensesByActivity,
     currentExpense,
     loading,
     error,
@@ -355,7 +352,7 @@ export const useExpensesStore = defineStore('expenses', () => {
     unmarkShareAsPaid,
     clearError,
     clearCurrentExpense,
-    clearExpensesForTask,
+    clearExpensesForActivity,
     reset
   }
 })

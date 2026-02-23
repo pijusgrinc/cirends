@@ -86,6 +86,7 @@ export interface CreateExpenseRequest {
   amount: number
   currency?: string
   expenseDate: string
+  paidByUserId: number
   shares: ExpenseShareInput[]
 }
 
@@ -94,6 +95,7 @@ export interface UpdateExpenseRequest {
   amount?: number
   currency?: string
   expenseDate?: string
+  paidByUserId?: number
   shares?: ExpenseShareInput[]
 }
 

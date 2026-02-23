@@ -10,7 +10,7 @@ using System.ComponentModel.DataAnnotations;
 namespace CirendsAPI.Controllers
 {
     [ApiController]
-    [Route("api/activities/{activityId}/tasks/{taskId}/expenses")]
+    [Route("api/activities/{activityId}/expenses")]
     [Authorize]
     public class ExpensesController : ControllerBase
     {
@@ -24,31 +24,45 @@ namespace CirendsAPI.Controllers
         }
 
         /// <summary>
-        /// Get all expenses for a task (hierarchical: activity -> task -> expense)
+        /// Get all expenses for an activity
         /// </summary>
         [HttpGet]
         [ProducesResponseType(typeof(List<ExpenseDto>), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public async Task<ActionResult<List<ExpenseDto>>> GetExpensesByTask(int activityId, int taskId)
+        public async Task<ActionResult<List<ExpenseDto>>> GetExpensesByActivity(int activityId)
         {
-            var validation = ValidationHelper.ValidateHierarchyIds((activityId, "activityId"), (taskId, "taskId"));
+            var validation = ValidationHelper.ValidatePositiveId(activityId, "activityId");
             if (validation != null) return validation;
+
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
+            {
+                return ValidationHelper.InvalidAuthenticationResponse();
+            }
 
             try
             {
-                var task = await _context.Tasks
+                var activity = await _context.Activities
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
+                    .Include(a => a.ActivityUsers)
+                    .FirstOrDefaultAsync(a => a.Id == activityId);
 
-                if (task == null)
+                if (activity == null)
                 {
-                    return NotFound(new { message = "Task not found or does not belong to this activity", error = "TASK_NOT_FOUND" });
+                    return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
+                }
+
+                var hasAccess = activity.CreatedByUserId == userId ||
+                                activity.ActivityUsers.Any(au => au.UserId == userId);
+
+                if (!hasAccess)
+                {
+                    return Forbid();
                 }
 
                 var expenses = await _context.Expenses
                     .AsNoTracking()
-                    .Where(e => e.TaskId == taskId)
+                    .Where(e => e.ActivityId == activityId)
                     .Include(e => e.PaidBy)
                     .Include(e => e.ExpenseShares)
                     .ThenInclude(es => es.User)
@@ -60,7 +74,7 @@ namespace CirendsAPI.Controllers
                         Amount = e.Amount,
                         Currency = e.Currency,
                         ExpenseDate = e.ExpenseDate,
-                        TaskId = e.TaskId,
+                        ActivityId = e.ActivityId,
                         PaidByUserId = e.PaidByUserId,
                         CreatedAt = e.CreatedAt,
                         UpdatedAt = e.UpdatedAt,
@@ -94,32 +108,46 @@ namespace CirendsAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving expenses for task {TaskId}", taskId);
+                _logger.LogError(ex, "Error retrieving expenses for activity {ActivityId}", activityId);
                 return StatusCode(500, new { message = "Internal server error", error = "DATABASE_ERROR" });
             }
         }
 
         /// <summary>
-        /// Get expense by ID (hierarchical: activity -> task -> expense)
+        /// Get expense by ID (activity -> expense)
         /// </summary>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(ExpenseDto), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public async Task<ActionResult<ExpenseDto>> GetExpense(int activityId, int taskId, int id)
+        public async Task<ActionResult<ExpenseDto>> GetExpense(int activityId, int id)
         {
-            var validation = ValidationHelper.ValidateHierarchyIds((activityId, "activityId"), (taskId, "taskId"), (id, "expenseId"));
+            var validation = ValidationHelper.ValidateHierarchyIds((activityId, "activityId"), (id, "expenseId"));
             if (validation != null) return validation;
+
+            if (!ValidationHelper.TryGetCurrentUserId(User, out var userId))
+            {
+                return ValidationHelper.InvalidAuthenticationResponse();
+            }
 
             try
             {
-                var task = await _context.Tasks
+                var activity = await _context.Activities
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
+                    .Include(a => a.ActivityUsers)
+                    .FirstOrDefaultAsync(a => a.Id == activityId);
 
-                if (task == null)
+                if (activity == null)
                 {
-                    return NotFound(new { message = "Task not found or does not belong to this activity", error = "TASK_NOT_FOUND" });
+                    return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
+                }
+
+                var hasAccess = activity.CreatedByUserId == userId ||
+                                activity.ActivityUsers.Any(au => au.UserId == userId);
+
+                if (!hasAccess)
+                {
+                    return Forbid();
                 }
 
                 var expense = await _context.Expenses
@@ -127,11 +155,11 @@ namespace CirendsAPI.Controllers
                     .Include(e => e.PaidBy)
                     .Include(e => e.ExpenseShares)
                     .ThenInclude(es => es.User)
-                    .FirstOrDefaultAsync(e => e.Id == id && e.TaskId == taskId);
+                    .FirstOrDefaultAsync(e => e.Id == id && e.ActivityId == activityId);
 
                 if (expense == null)
                 {
-                    return NotFound(new { message = "Expense not found or does not belong to this task", error = "EXPENSE_NOT_FOUND" });
+                    return NotFound(new { message = "Expense not found or does not belong to this activity", error = "EXPENSE_NOT_FOUND" });
                 }
 
                 return Ok(new ExpenseDto
@@ -142,7 +170,7 @@ namespace CirendsAPI.Controllers
                     Amount = expense.Amount,
                     Currency = expense.Currency,
                     ExpenseDate = expense.ExpenseDate,
-                    TaskId = expense.TaskId,
+                    ActivityId = expense.ActivityId,
                     CreatedAt = expense.CreatedAt,
                     UpdatedAt = expense.UpdatedAt,
                     PaidBy = expense.PaidBy != null ? new UserDto
@@ -178,15 +206,15 @@ namespace CirendsAPI.Controllers
         }
 
         /// <summary>
-        /// Create expense (hierarchical)
+        /// Create expense (activity-scoped)
         /// </summary>
         [HttpPost]
         [ProducesResponseType(typeof(ExpenseDto), 201)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public async Task<ActionResult<ExpenseDto>> CreateExpense(int activityId, int taskId, [FromBody] CreateExpenseDto? createDto)
+        public async Task<ActionResult<ExpenseDto>> CreateExpense(int activityId, [FromBody] CreateExpenseDto? createDto)
         {
-            var validation = ValidationHelper.ValidateHierarchyIds((activityId, "activityId"), (taskId, "taskId"));
+            var validation = ValidationHelper.ValidatePositiveId(activityId, "activityId");
             if (validation != null) return validation;
 
             if (createDto == null)
@@ -210,12 +238,21 @@ namespace CirendsAPI.Controllers
 
             try
             {
-                var task = await _context.Tasks
-                    .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
+                var activity = await _context.Activities
+                    .Include(a => a.ActivityUsers)
+                    .FirstOrDefaultAsync(a => a.Id == activityId);
 
-                if (task == null)
+                if (activity == null)
                 {
-                    return NotFound(new { message = "Task not found or does not belong to this activity", error = "TASK_NOT_FOUND" });
+                    return NotFound(new { message = "Activity not found", error = "ACTIVITY_NOT_FOUND" });
+                }
+
+                var hasAccess = activity.CreatedByUserId == userId ||
+                                activity.ActivityUsers.Any(au => au.UserId == userId);
+
+                if (!hasAccess)
+                {
+                    return Forbid();
                 }
 
                 if (createDto.Amount <= 0)
@@ -230,7 +267,7 @@ namespace CirendsAPI.Controllers
                     Amount = createDto.Amount,
                     Currency = createDto.Currency ?? "EUR",
                     ExpenseDate = DateTime.SpecifyKind(createDto.ExpenseDate, DateTimeKind.Utc),
-                    TaskId = taskId,
+                    ActivityId = activityId,
                     PaidByUserId = createDto.PaidByUserId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -264,17 +301,17 @@ namespace CirendsAPI.Controllers
                     .FirstOrDefaultAsync(e => e.Id == expense.Id);
 
                 return CreatedAtAction(nameof(GetExpense),
-                    new { activityId, taskId, id = expense.Id },
+                    new { activityId, id = expense.Id },
                     MapExpenseToDto(createdExpense!));
             }
             catch (DbUpdateException ex)
             {
-                _logger.LogError(ex, "Database error creating expense for task {TaskId}", taskId);
+                _logger.LogError(ex, "Database error creating expense for activity {ActivityId}", activityId);
                 return StatusCode(500, new { message = "Failed to create expense", error = "DATABASE_ERROR" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error creating expense for task {TaskId}", taskId);
+                _logger.LogError(ex, "Unexpected error creating expense for activity {ActivityId}", activityId);
                 return StatusCode(500, new { message = "Internal server error", error = "UNKNOWN_ERROR" });
             }
         }
@@ -286,9 +323,9 @@ namespace CirendsAPI.Controllers
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> UpdateExpense(int activityId, int taskId, int id, [FromBody] UpdateExpenseDto? updateDto)
+        public async Task<IActionResult> UpdateExpense(int activityId, int id, [FromBody] UpdateExpenseDto? updateDto)
         {
-            var validation = ValidationHelper.ValidateHierarchyIds((activityId, "activityId"), (taskId, "taskId"), (id, "expenseId"));
+            var validation = ValidationHelper.ValidateHierarchyIds((activityId, "activityId"), (id, "expenseId"));
             if (validation != null) return validation;
 
             if (updateDto == null)
@@ -309,11 +346,11 @@ namespace CirendsAPI.Controllers
             {
                 var expense = await _context.Expenses
                     .Include(e => e.ExpenseShares)
-                    .FirstOrDefaultAsync(e => e.Id == id && e.TaskId == taskId);
+                    .FirstOrDefaultAsync(e => e.Id == id && e.ActivityId == activityId);
 
                 if (expense == null)
                 {
-                    return NotFound(new { message = "Expense not found or does not belong to this task", error = "EXPENSE_NOT_FOUND" });
+                    return NotFound(new { message = "Expense not found or does not belong to this activity", error = "EXPENSE_NOT_FOUND" });
                 }
 
                 if (updateDto.Amount.HasValue && updateDto.Amount <= 0)
@@ -380,19 +417,19 @@ namespace CirendsAPI.Controllers
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> DeleteExpense(int activityId, int taskId, int id)
+        public async Task<IActionResult> DeleteExpense(int activityId, int id)
         {
-            var validation = ValidationHelper.ValidateHierarchyIds((activityId, "activityId"), (taskId, "taskId"), (id, "expenseId"));
+            var validation = ValidationHelper.ValidateHierarchyIds((activityId, "activityId"), (id, "expenseId"));
             if (validation != null) return validation;
 
             try
             {
                 var expense = await _context.Expenses
-                    .FirstOrDefaultAsync(e => e.Id == id && e.TaskId == taskId);
+                    .FirstOrDefaultAsync(e => e.Id == id && e.ActivityId == activityId);
 
                 if (expense == null)
                 {
-                    return NotFound(new { message = "Expense not found or does not belong to this task", error = "EXPENSE_NOT_FOUND" });
+                    return NotFound(new { message = "Expense not found or does not belong to this activity", error = "EXPENSE_NOT_FOUND" });
                 }
 
                 // Also delete related expense shares
@@ -431,7 +468,7 @@ namespace CirendsAPI.Controllers
                 Amount = expense.Amount,
                 Currency = expense.Currency,
                 ExpenseDate = expense.ExpenseDate,
-                TaskId = expense.TaskId,
+                ActivityId = expense.ActivityId,
                 PaidByUserId = expense.PaidByUserId,
                 CreatedAt = expense.CreatedAt,
                 UpdatedAt = expense.UpdatedAt,

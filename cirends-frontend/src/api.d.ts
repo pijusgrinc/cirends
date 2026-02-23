@@ -46,14 +46,14 @@ export const tasksAPI: {
 
 // Expenses API
 export const expensesAPI: {
-  getAll(activityId: number, taskId: number): Promise<ApiResponse<Expense[]>>
-  getById(activityId: number, taskId: number, expenseId: number): Promise<ApiResponse<Expense>>
-  create(activityId: number, taskId: number, data: any): Promise<ApiResponse<Expense>>
-  update(activityId: number, taskId: number, expenseId: number, data: any): Promise<ApiResponse<Expense>>
-  delete(activityId: number, taskId: number, expenseId: number): Promise<ApiResponse<void>>
-  markShareAsPaid(activityId: number, taskId: number, expenseId: number, shareId: number): Promise<ApiResponse<void>>
-  unmarkShareAsPaid(activityId: number, taskId: number, expenseId: number, shareId: number): Promise<ApiResponse<void>>
-  markAllExpensesAsPaidForTask(activityId: number, taskId: number): Promise<ApiResponse<void>>
+  getAll(activityId: number): Promise<ApiResponse<Expense[]>>
+  getById(activityId: number, expenseId: number): Promise<ApiResponse<Expense>>
+  create(activityId: number, data: any): Promise<ApiResponse<Expense>>
+  update(activityId: number, expenseId: number, data: any): Promise<ApiResponse<Expense>>
+  delete(activityId: number, expenseId: number): Promise<ApiResponse<void>>
+  markShareAsPaid(activityId: number, expenseId: number, shareId: number): Promise<ApiResponse<void>>
+  unmarkShareAsPaid(activityId: number, expenseId: number, shareId: number): Promise<ApiResponse<void>>
+  markAllExpensesAsPaidForActivity(activityId: number): Promise<ApiResponse<void>>
 }
 
 // Invitations API

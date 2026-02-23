@@ -63,7 +63,7 @@ namespace CirendsAPI.DTOs
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         [Required]
-        public int TaskId { get; set; }
+        public int ActivityId { get; set; }
         [Required]
         public int PaidByUserId { get; set; }
         public UserDto? PaidBy { get; set; }

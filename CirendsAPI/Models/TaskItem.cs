@@ -59,6 +59,5 @@ namespace CirendsAPI.Models
         [ForeignKey("CreatedByUserId")]
         public User? CreatedBy { get; set; }
 
-        public ICollection<Expense> Expenses { get; set; } = new List<Expense>();
     }
 }

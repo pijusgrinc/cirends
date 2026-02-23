@@ -312,25 +312,23 @@ paths:
         "400": { description: Bad Request }
         "404": { description: Not Found }
 
-  /activities/{activityId}/tasks/{taskId}/expenses:
+  /activities/{activityId}/expenses:
     get:
       tags: [Expenses]
       parameters:
         - { name: activityId, in: path, required: true, schema: { type: integer } }
-        - { name: taskId, in: path, required: true, schema: { type: integer } }
       responses:
         "200":
           description: OK
           content:
             application/json:
               example:
-                - { id: 21, name: "Maistas", amount: 60.0, currency: "EUR", taskId: 11, paidByUserId: 1 }
+                - { id: 21, name: "Maistas", amount: 60.0, currency: "EUR", activityId: 5, paidByUserId: 1 }
         "404": { description: Not Found }
     post:
       tags: [Expenses]
       parameters:
         - { name: activityId, in: path, required: true, schema: { type: integer } }
-        - { name: taskId, in: path, required: true, schema: { type: integer } }
       requestBody:
         content:
           application/json:
@@ -353,12 +351,11 @@ paths:
         "400": { description: Bad Request }
         "404": { description: Not Found }
 
-  /activities/{activityId}/tasks/{taskId}/expenses/{id}:
+  /activities/{activityId}/expenses/{id}:
     get:
       tags: [Expenses]
       parameters:
         - { name: activityId, in: path, required: true, schema: { type: integer } }
-        - { name: taskId, in: path, required: true, schema: { type: integer } }
         - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
         "200":
@@ -371,7 +368,6 @@ paths:
       tags: [Expenses]
       parameters:
         - { name: activityId, in: path, required: true, schema: { type: integer } }
-        - { name: taskId, in: path, required: true, schema: { type: integer } }
         - { name: id, in: path, required: true, schema: { type: integer } }
       requestBody:
         content:
@@ -385,18 +381,16 @@ paths:
       tags: [Expenses]
       parameters:
         - { name: activityId, in: path, required: true, schema: { type: integer } }
-        - { name: taskId, in: path, required: true, schema: { type: integer } }
         - { name: id, in: path, required: true, schema: { type: integer } }
       responses:
         "204": { description: No Content }
         "404": { description: Not Found }
 
-  /activities/{activityId}/tasks/{taskId}/expenses/{expenseId}/shares/{shareId}/mark-paid:
+  /activities/{activityId}/expenses/{expenseId}/shares/{shareId}/mark-paid:
     patch:
       tags: [ExpenseShares]
       parameters:
         - { name: activityId, in: path, required: true, schema: { type: integer } }
-        - { name: taskId, in: path, required: true, schema: { type: integer } }
         - { name: expenseId, in: path, required: true, schema: { type: integer } }
         - { name: shareId, in: path, required: true, schema: { type: integer } }
       responses:
@@ -405,12 +399,11 @@ paths:
         "403": { description: Forbidden }
         "404": { description: Not Found }
 
-  /activities/{activityId}/tasks/{taskId}/expenses/{expenseId}/shares/{shareId}/unmark-paid:
+  /activities/{activityId}/expenses/{expenseId}/shares/{shareId}/unmark-paid:
     patch:
       tags: [ExpenseShares]
       parameters:
         - { name: activityId, in: path, required: true, schema: { type: integer } }
-        - { name: taskId, in: path, required: true, schema: { type: integer } }
         - { name: expenseId, in: path, required: true, schema: { type: integer } }
         - { name: shareId, in: path, required: true, schema: { type: integer } }
       responses:
@@ -419,12 +412,11 @@ paths:
         "403": { description: Forbidden }
         "404": { description: Not Found }
 
-  /activities/{activityId}/tasks/{taskId}/expenses/mark-all-paid:
+  /activities/{activityId}/expenses/mark-all-paid:
     post:
       tags: [ExpenseShares]
       parameters:
         - { name: activityId, in: path, required: true, schema: { type: integer } }
-        - { name: taskId, in: path, required: true, schema: { type: integer } }
       responses:
         "204": { description: No Content }
         "400": { description: Bad Request }

@@ -47,7 +47,7 @@
             </button>
           </div>
 
-          <!-- Tasks Tab (nested expenses) -->
+          <!-- Tasks Tab -->
           <div v-if="activeTab === 'tasks'" class="tab-content">
             <div class="tab-header">
               <h2>Užduotys</h2>
@@ -66,30 +66,37 @@
                   @edit="editTask(task)"
                   @delete="deleteTask(task.id)"
                   @update-status="(taskObj, status) => updateTaskStatus(task.id, status)"
-                  @mark-expenses-paid="handleMarkExpensesPaid"
                 />
-                <div class="task-expenses">
-                  <div class="task-expenses-header">
-                    <h5>Išlaidos</h5>
-                    <Button size="sm" variant="ghost" @click="openExpenseForTask(task.id)">+ Pridėti išlaidas</Button>
-                  </div>
-                  <div v-if="expensesStore.getExpenses(activityId, task.id).length > 0" class="expenses-list">
-                    <ExpenseItem
-                      v-for="expense in expensesStore.getExpenses(activityId, task.id)"
-                      :key="expense.id"
-                      :expense="expense"
-                      :showActions="true"
-                      @edit="editExpense(expense)"
-                      @delete="deleteExpense(expense.id)"
-                      @mark-paid="(shareId) => handleMarkSharePaid(expense, shareId)"
-                      @unmark-paid="(shareId) => handleUnmarkSharePaid(expense, shareId)"
-                    />
-                  </div>
-                  <EmptyState v-else title="Nėra išlaidų" description="Pridėkite išlaidas šiai užduočiai" />
-                </div>
               </div>
             </div>
             <EmptyState v-else title="Nėra užduočių" description="Sukurkite pirmąją užduotį" />
+          </div>
+
+          <!-- Expenses Tab -->
+          <div v-if="activeTab === 'expenses'" class="tab-content">
+            <div class="tab-header">
+              <h2>Išlaidos</h2>
+              <Button variant="primary" @click="openExpenseModal">
+                <template #icon>
+                  <Icon name="add" />
+                </template>
+                Nauja išlaida
+              </Button>
+            </div>
+
+            <div v-if="expensesStore.getExpenses(activityId).length > 0" class="expenses-list">
+              <ExpenseItem
+                v-for="expense in expensesStore.getExpenses(activityId)"
+                :key="expense.id"
+                :expense="expense"
+                :showActions="true"
+                @edit="editExpense(expense)"
+                @delete="deleteExpense(expense.id)"
+                @mark-paid="(shareId) => handleMarkSharePaid(expense, shareId)"
+                @unmark-paid="(shareId) => handleUnmarkSharePaid(expense, shareId)"
+              />
+            </div>
+            <EmptyState v-else title="Nėra išlaidų" description="Pridėkite pirmąją išlaidą šiai veiklai" />
           </div>
 
           <!-- Participants Tab -->
@@ -229,10 +236,8 @@
       <template #header>{{ editingExpense ? 'Redaguoti išlaidas' : 'Nauja išlaida' }}</template>
       <template #body>
         <ExpenseForm
-          :tasks="tasks"
           :participants="participants"
           :expense="editingExpense"
-          :initialTaskId="selectedTaskForExpense"
           :loading="expensesStore.loading"
           @submit="handleSubmitExpense"
           @cancel="closeExpenseModal"
@@ -287,7 +292,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useActivitiesStore, useTasksStore, useExpensesStore } from '@/stores'
 import { useToast } from '@/composables'
 import { formatDate } from '@/utils/date'
-import { Button, Loading, EmptyState, Card } from '@/components/common'
+import { Button, Loading, EmptyState } from '@/components/common'
 import { TaskItem, TaskForm } from '@/components/tasks'
 import { ExpenseItem, ExpenseForm } from '@/components/expenses'
 import { ActivityForm } from '@/components/activities'
@@ -295,7 +300,7 @@ import { Icon } from '@/components/icons'
 import Modal from '@/components/Modal.vue'
 import type { Task, Expense, TaskStatus } from '@/types'
 import { getRoleLabel } from '@/types/enums'
-import { invitationsAPI, expensesAPI, activitiesAPI } from '@/api'
+import { invitationsAPI, activitiesAPI } from '@/api'
 
 const route = useRoute()
 const $router = useRouter()
@@ -321,8 +326,6 @@ function getInvitationStatusLabel(status: number): string {
 const activityId = computed(() => Number(route.params.id))
 const activity = computed(() => activitiesStore.getActivity(activityId.value))
 const tasks = computed(() => tasksStore.getTasks(activityId.value))
-// Aggregated expenses no longer needed for tab view; kept for potential summary use
-const expenses = computed(() => tasks.value.flatMap(task => expensesStore.getExpenses(activityId.value, task.id)))
 // Only invited participants should be available for expense shares
 // Extract User objects from ActivityUser array and add creator
 const participants = computed(() => {
@@ -350,13 +353,12 @@ const participants = computed(() => {
   return users
 })
 
-const activeTab = ref<'tasks' | 'participants'>('tasks')
+const activeTab = ref<'tasks' | 'expenses' | 'participants'>('tasks')
 const showTaskModal = ref(false)
 const showExpenseModal = ref(false)
 const showInviteModal = ref(false)
 const editingTask = ref<Task | null>(null)
 const editingExpense = ref<Expense | null>(null)
-const selectedTaskForExpense = ref<number>(0)
 const showActivityModal = ref(false)
 const inviteEmail = ref('')
 const inviteLoading = ref(false)
@@ -366,6 +368,7 @@ const removingParticipant = ref(false)
 
 const tabs = [
   { key: 'tasks' as const, label: 'Užduotys' },
+  { key: 'expenses' as const, label: 'Išlaidos' },
   { key: 'participants' as const, label: 'Dalyviai' }
 ]
 
@@ -411,11 +414,7 @@ async function loadActivityData(forceRefresh = false) {
   try {
     await activitiesStore.fetchActivity(activityId.value, forceRefresh)
     await tasksStore.fetchTasks(activityId.value, forceRefresh)
-    
-    // Fetch expenses for all tasks
-    for (const task of tasks.value) {
-      await expensesStore.fetchExpenses(activityId.value, task.id, forceRefresh)
-    }
+    await expensesStore.fetchExpenses(activityId.value, forceRefresh)
     
     // Fetch invitations for this activity
     await loadActivityInvitations()
@@ -475,7 +474,6 @@ async function deleteTask(taskId: number) {
   try {
     await tasksStore.deleteTask(activityId.value, taskId)
     success('Užduotis ištrinta')
-    await loadActivityData(true) // Refresh data
   } catch (e) {
     error('Nepavyko ištrinti užduoties')
   }
@@ -492,30 +490,20 @@ async function updateTaskStatus(taskId: number, newStatus: TaskStatus) {
 
 function editExpense(expense: Expense) {
   editingExpense.value = expense
-  selectedTaskForExpense.value = expense.taskId
   showExpenseModal.value = true
 }
 
 function closeExpenseModal() {
   showExpenseModal.value = false
   editingExpense.value = null
-  selectedTaskForExpense.value = 0
 }
 
 async function deleteExpense(expenseId: number) {
   if (!confirm('Ar tikrai norite ištrinti šią išlaidą?')) return
   
   try {
-    // Find which task this expense belongs to
-    const task = tasks.value.find(t => 
-      expensesStore.getExpenses(activityId.value, t.id).some(e => e.id === expenseId)
-    )
-    
-    if (task) {
-      await expensesStore.deleteExpense(activityId.value, task.id, expenseId)
-      success('Išlaida ištrinta')
-      await loadActivityData(true) // Refresh data
-    }
+    await expensesStore.deleteExpense(activityId.value, expenseId)
+    success('Išlaida ištrinta')
   } catch (e) {
     error('Nepavyko ištrinti išlaidos')
   }
@@ -528,7 +516,6 @@ async function handleSubmitTask(payload: any) {
       if (updated) {
         success('Užduotis atnaujinta!')
         closeTaskModal()
-        await loadActivityData(true) // Refresh data
       } else {
         error(tasksStore.error || 'Nepavyko atnaujinti užduoties')
       }
@@ -537,7 +524,6 @@ async function handleSubmitTask(payload: any) {
       if (created) {
         success('Užduotis sukurta!')
         closeTaskModal()
-        await loadActivityData(true) // Refresh data
       } else {
         error(tasksStore.error || 'Nepavyko sukurti užduoties')
       }
@@ -547,35 +533,26 @@ async function handleSubmitTask(payload: any) {
   }
 }
 
-function openExpenseForTask(taskId: number) {
-  selectedTaskForExpense.value = taskId
+function openExpenseModal() {
   editingExpense.value = null
   showExpenseModal.value = true
 }
 
 async function handleSubmitExpense(payload: any) {
   try {
-    const { taskId, ...data } = payload
-    const targetTaskId = taskId || selectedTaskForExpense.value
-    if (!targetTaskId) {
-      error('Pasirinkite užduotį')
-      return
-    }
     if (editingExpense.value) {
-      const updated = await expensesStore.updateExpense(activityId.value, targetTaskId, editingExpense.value.id, data)
+      const updated = await expensesStore.updateExpense(activityId.value, editingExpense.value.id, payload)
       if (updated) {
         success('Išlaida atnaujinta!')
         closeExpenseModal()
-        await loadActivityData(true) // Refresh data
       } else {
         error(expensesStore.error || 'Nepavyko atnaujinti išlaidos')
       }
     } else {
-      const created = await expensesStore.createExpense(activityId.value, targetTaskId, data)
+      const created = await expensesStore.createExpense(activityId.value, payload)
       if (created) {
         success('Išlaida sukurta!')
         closeExpenseModal()
-        await loadActivityData(true) // Refresh data
       } else {
         error(expensesStore.error || 'Nepavyko sukurti išlaidos')
       }
@@ -621,10 +598,9 @@ async function handleActivitySubmit(data: any) {
 
 async function handleMarkSharePaid(expense: Expense, shareId: number) {
   try {
-    const result = await expensesStore.markShareAsPaid(activityId.value, expense.taskId, expense.id, shareId)
+    const result = await expensesStore.markShareAsPaid(activityId.value, expense.id, shareId)
     if (result) {
-      success('Mokėjimas patvirtintas!')
-      await loadActivityData(true)
+      success('Mokėjimas patvirtintas!')     
     } else {
       error(expensesStore.error || 'Nepavyko patvirtinti mokėjimo')
     }
@@ -635,10 +611,9 @@ async function handleMarkSharePaid(expense: Expense, shareId: number) {
 
 async function handleUnmarkSharePaid(expense: Expense, shareId: number) {
   try {
-    const result = await expensesStore.unmarkShareAsPaid(activityId.value, expense.taskId, expense.id, shareId)
+    const result = await expensesStore.unmarkShareAsPaid(activityId.value, expense.id, shareId)
     if (result) {
       success('Mokėjimo patvirtinimas atšauktas')
-      await loadActivityData(true)
     } else {
       error(expensesStore.error || 'Nepavyko atšaukti patvirtinimo')
     }
@@ -647,35 +622,6 @@ async function handleUnmarkSharePaid(expense: Expense, shareId: number) {
   }
 }
 
-async function handleMarkExpensesPaid(task: Task) {
-  if (!task.expenses || task.expenses.length === 0) return
-  
-  // Count unpaid shares
-  const unpaidCount = task.expenses.reduce((count, expense) => {
-    return count + (expense.shares?.filter(s => !s.isPaid).length || 0)
-  }, 0)
-  
-  if (unpaidCount === 0) return // All already paid
-  
-  const confirmed = confirm(
-    `Užduotis „${task.name}" pažymėta kaip atlikta.\n\n` +
-    `Ar norite pažymėti visas susijusias išlaidas (${unpaidCount} mokėjimų) kaip sumokėtas?`
-  )
-  
-  if (!confirmed) return
-  
-  try {
-    const response = await expensesAPI.markAllExpensesAsPaidForTask(activityId.value, task.id)
-    if (response.ok) {
-      success('Visos išlaidos pažymėtos kaip sumokėtos!')
-      await loadActivityData(true)
-    } else {
-      error('Nepavyko pažymėti išlaidų kaip sumokėtų')
-    }
-  } catch (e) {
-    error('Netikėta klaida')
-  }
-}
 
 async function handleInviteSubmit() {
   if (!inviteEmail.value) return

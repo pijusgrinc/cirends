@@ -79,6 +79,5 @@ namespace CirendsAPI.DTOs
         public int ActivityId { get; set; }
         public UserDto? AssignedTo { get; set; }
         public UserDto CreatedBy { get; set; } = null!;
-        public List<ExpenseDto> Expenses { get; set; } = new();
     }
 }

@@ -125,7 +125,7 @@ const showActivityModal = ref(false)
 const stats = computed(() => ({
   activitiesCount: activitiesStore.activities.length,
   tasksCount: Object.values(tasksStore.tasksByActivity).flat().length,
-  expensesCount: Object.values(expensesStore.expensesByTask).flat().length,
+  expensesCount: Object.values(expensesStore.expensesByActivity).flat().length,
   pendingInvitations: invitationsStore.pendingInvitations.length
 }))
 
