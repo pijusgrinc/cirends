@@ -115,12 +115,15 @@ namespace CirendsAPI.Services
         public async Task UpdateTaskAsync(int activityId, int taskId, int userId, UpdateTaskDto updateTaskDto)
         {
             var task = await _context.Tasks
-                .Include(t => t.Activity)
+                .Include(t => t.Activity!)
                 .ThenInclude(a => a.ActivityUsers)
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
 
             if (task == null)
                 throw new NotFoundException("Task not found");
+
+            if (task.Activity == null)
+                throw new NotFoundException("Activity not found");
 
             var hasAccess = task.Activity.CreatedByUserId == userId ||
                            task.Activity.ActivityUsers.Any(au => au.UserId == userId);
@@ -167,12 +170,15 @@ namespace CirendsAPI.Services
         public async Task DeleteTaskAsync(int activityId, int taskId, int userId)
         {
             var task = await _context.Tasks
-                .Include(t => t.Activity)
+                .Include(t => t.Activity!)
                 .ThenInclude(a => a.ActivityUsers)
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.ActivityId == activityId);
 
             if (task == null)
                 throw new NotFoundException("Task not found");
+
+            if (task.Activity == null)
+                throw new NotFoundException("Activity not found");
 
             var isCreator = task.CreatedByUserId == userId;
             var isActivityCreator = task.Activity.CreatedByUserId == userId;

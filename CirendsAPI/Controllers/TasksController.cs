@@ -123,7 +123,7 @@ namespace CirendsAPI.Controllers
                     } : null,
                     CreatedBy = new UserDto
                     {
-                        Id = task.CreatedBy.Id,
+                        Id = task.CreatedBy!.Id,
                         Name = task.CreatedBy.Name,
                         Email = task.CreatedBy.Email,
                         Role = task.CreatedBy.Role,
