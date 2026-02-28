@@ -105,7 +105,7 @@ namespace CirendsAPI.Services
                 Currency = createExpenseDto.Currency,
                 ExpenseDate = createExpenseDto.ExpenseDate,
                 ActivityId = activityId,
-                PaidByUserId = userId
+                PaidByUserId = createExpenseDto.PaidByUserId
             };
 
             _context.Expenses.Add(expense);
